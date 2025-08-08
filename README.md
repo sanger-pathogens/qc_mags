@@ -105,7 +105,7 @@ NOTE: In addition to columns derived from the tool reports, the script includes 
 -----------------------------------------------------------------
  Other options
       --fasta_ext
-            default: fa
+            default: .fa
             Rename fasta output files using the given extension
       --report_config
             default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
