@@ -119,7 +119,7 @@ If writing a custom AutoQC config the filterable columns with the default report
 - gunc_preqc_n_contigs
 - gunc_preqc_pass.GUNC
 
-If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep*column from the report config seperated by an underscore. i.e. `<tool>*<keep*column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>*<qc*stage>*<keep_column>`, as shown in the filterable column list above.
+If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep\_column from the report config seperated by an underscore. i.e. `<tool>\_<keep\_column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>\_<qc\_stage>\_<keep_column>`, as shown in the filterable column list above.
 
 Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
 
