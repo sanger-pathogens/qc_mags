@@ -88,9 +88,40 @@ NOTE: In addition to columns derived from the tool reports, the script includes 
 | sample_or_strain_name | Name of the fasta file up to the last `_` character                                      |
 | genome_status         | `mag` if the fasta file contains the string `mag` (lower/uppercase), `isolate` otherwise |
 
-### Autoqc configuration
+### AutoQC configuration
 
-It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration). To do this, you must enable autoqc with the `--autoqc` option and supply an configuration file to `--autoqc_config` as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy). If you do not supply a configuration file, the default [autoqc_config.tsv](./assets/autoqc_config.tsv) will be used.
+It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
+
+To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv) is used.
+
+The default AutoQC config's pass criteria are:
+- Over 90% Completeness
+- Under 5% Contamination
+- Passes GUNC contamination checks
+
+If writing a custom AutoQC config the filterable columns with the default report config are:
+- preqc_genome_name
+- postqc_genome_name
+- sample_or_strain_name
+- genome_status
+- checkm2_postqc_Completeness
+- checkm2_postqc_Contamination
+- checkm2_postqc_Genome_Size
+- checkm2_preqc_Completeness
+- checkm2_preqc_Contamination
+- checkm2_preqc_Genome_Size
+- gtdbtk_classification
+- gtdbtk_closest_genome_reference
+- gunc_postqc_n_contigs
+- gunc_postqc_pass.GUNC
+- gunc_preqc_n_contigs
+- gunc_preqc_pass.GUNC
+
+If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep_column from the report config seperated by an underscore. i.e.  `<tool>_<keep_column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>_<qc_stage>_<keep_column>`, as shown in the filterable column list above.
+
+Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
+
+
 
 ## Usage
 
@@ -118,12 +149,11 @@ It is also possible to automatically filter MAGs based on QC metrics produced in
       --report_config
             default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
             Configuration file (JSON) to customise summary report
-      --autoqc
-            default: False
-            Enable filtering MAGs (fasta) that pass QC thresholds/filters provided in the --autoqc_config
       --autoqc_config
-            default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
-            Configuration file (TSV) to customise filtering of MAGs (fasta), based on metrics in summary report
+            default: null
+            Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at `./assorted-sub-workflows/qc_mags/assets/autoqc_config.json`. See [AutoQC configuration](#autoqc-configuration) for more details.
+
+
 -----------------------------------------------------------------
  Logging options
       --monochrome_logs
