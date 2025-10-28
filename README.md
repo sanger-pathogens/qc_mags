@@ -105,7 +105,7 @@ NOTE: In addition to columns derived from the tool reports, the script includes 
 
 It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
 
-To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted_sub_workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
+To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
 
 The default AutoQC config's pass criteria are:
 
