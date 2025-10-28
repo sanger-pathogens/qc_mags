@@ -16,6 +16,47 @@ It runs the following steps on the assembly (`fasta` files):
 4. **checkm2 and GUNC**: The same checkm2 and GUNC commands (stage 2) are run on the seqkit fasta outputs.
 5. **Reporting** A summary CSV report is created that combines the summary files of checkm2, gtdbtk and GUNC runs (both before and after decontamination with MDMCleaner).
 
+## Getting started
+
+For example pipeline input, please see [Generating a manifest](#generating-a-manifest).
+
+To run the pipeline on the Sanger HPC as a module replace `nextflow run main.nf` with the name of the tool. For instance, to see a help message:
+
+```
+module load qc_mags
+qc_mags --help
+```
+
+To run the pipeline from source (this repository):
+
+1.  Clone the repository.
+2.  Run with `docker`, use the path to the `-profile docker` option:
+
+    ```
+    nextflow run main.nf \
+        -profile docker \
+        --manifest test_data/manifest.csv \
+        --gtdbtk_db /absolute/path/to/gtdbtk_db
+        --checkm2_db path/to/checkm2_db \
+        --gunc_db path/to/gunc_db \
+        --mdmcleaner_db path/to/mdmcleaner_db
+    ```
+
+    :warning: The path provided to `--gtdbtk_db` must be an absolute filepath.
+
+    Other profiles are also supported (`docker`, `singularity`).  
+    :warning: If no profile is specified the pipeline will run with a Sanger HPC-specific configuration.
+
+    See [usage](#usage) for all available pipeline options.
+
+## Generating a manifest
+
+The CSV manifest provided via the `--manifest` option should have the following format:
+
+| ID        | mags_dir                                                  |
+| --------- | --------------------------------------------------------- |
+| Sample ID | Directory containing binned MAG assemblies (fasta format) |
+
 ### Parameters
 
 Several parameters set paths to various databases used by pipeline tools:
@@ -64,7 +105,7 @@ NOTE: In addition to columns derived from the tool reports, the script includes 
 
 It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
 
-To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](../mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
+To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted_sub_workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
 
 The default AutoQC config's pass criteria are:
 
@@ -91,13 +132,53 @@ If writing a custom AutoQC config the filterable columns with the default report
 - gunc_preqc_n_contigs
 - gunc_preqc_pass.GUNC
 
-If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep*column from the report config separated by an underscore. i.e. `<tool>*<keep*column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>*<qc*stage>*<keep_column>`, as shown in the filterable column list above.
+If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and `keep_column` from the report config separated by an underscore. i.e. `<tool>_<keep_column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>_<qc_stage>_<keep_column>`, as shown in the filterable column list above.
 
 Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
 
-### Inputs
+## Usage
 
-- (Metagenomic) assemblies per sample. Channel emitting elements `[meta, [1.fa, 2.fa, ...]]`, where meta is a map containing metadata (including the mandatory `ID`, tracking a sample ID).
+```
+ Database options
+      These parameters set paths to various databases used by the qc_mags workflow
+
+      --checkm2_db
+            default: /data/pam/software/checkm2_db/uniref100.KO.1.dmnd
+            Path to checkm2 diamond database file
+      --gunc_db
+            default: /data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd
+            Path to GUNC diamond database file
+      --mdmcleaner_db
+            default: /data/pam/software/mdmcleaner/v1
+            Path to MDMCleaner database directory
+      --gtdbtk_db
+            default: /data/pam/software/GTDBTk/release226
+            Path to gtdbtk database directory
+-----------------------------------------------------------------
+ Other options
+      --fasta_ext
+            default: fa
+            Rename fasta output files using the given extension
+      --report_config
+            default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
+            Configuration file (JSON) to customise summary report
+      --autoqc_config
+            default: null
+            Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string 'default' use the provided config.
+      --min_contig
+            default: 0
+            Configure the lower threshold for a contig level (in bp). Shorter contigs won't be taken into account, unless required in specific metrics.
+      --skip_raw_reports
+            default: false
+            Skip publishing raw reports from various QC tools, keeping only final summary reports.
+-----------------------------------------------------------------
+ Logging options
+      --monochrome_logs
+            default: false
+            Should logs appear in plain ASCII
+
+-----------------------------------------------------------------
+```
 
 ### Outputs
 
