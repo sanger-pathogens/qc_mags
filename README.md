@@ -1,65 +1,37 @@
-# QC MAGs
+# qc_mags
 
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A521.04.0-23aa62.svg?labelColor=000000)](https://www.nextflow.io/)
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-QC MAGs is a nextflow pipeline that assesses the quality of Metagenome Assembled Genomes (MAGs).
+This workflow performs assembly quality control, with a focus on metagenome-assembled genomes (MAGs).
 
-[[_TOC_]]
+## Pipeline Summary
 
-## Pipeline summary
+It runs the following steps on the assembly (`fasta` files):
 
-The pipeline runs a number of QC tools to classify the bins and predict contamination levels for binned MAGs (fasta format).
+1. **gtdbtk classify_wf and QUAST**: Assemblies are classified using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped. [QUAST](https://github.com/ablab/quast) evaluates genome/metagenome assemblies by computing various metrics.
+2. **checkm2 and GUNC**: [CheckM2](https://github.com/chklovski/CheckM2) is used to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination.
+3. **MDMCleaner**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) is used to remove contaminants and provide reliable contig classification of metagenome assembled genomes (MAGs). Sequences that are less than 1000 bases long are removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
+4. **checkm2 and GUNC**: The same checkm2 and GUNC commands (stage 2) are run on the seqkit fasta outputs.
+5. **Reporting** A summary CSV report is created that combines the summary files of checkm2, gtdbtk and GUNC runs (both before and after decontamination with MDMCleaner).
 
-In its simplest usage, **QC MAGs** takes a manifest (CSV; see [Generating a manifest](#generating-a-manifest)), and paths to databases for several tools as input. It then runs the following steps on the MAG bins (`fasta` files) within per-sample directories provided in the manifest:
+### Parameters
 
-1. **gtdbtk classify_wf**: The MAGs are classified using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped.
-2. **checkm2 and GUNC**: [CheckM2](https://github.com/chklovski/CheckM2) uses machine learning models to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination.
-3. **MDMCleaner**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) contamination-aware pipeline for reliable contig classification of metagenome assembled (MAG). Sequences that are less than 1000 bases long are removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
-4. **checkm2 and GUNC**: The same checkm2 and GUNC commands (stage 2) are run again on the contigs cleaned by MDMCleaner and filtered by seqkit.
-5. **Reporting** A summary CSV report is created that combines the summary files of checkm2, gtdbtk and GUNC runs (both before and after decontamination with MDMCleaner)
+Several parameters set paths to various databases used by pipeline tools:
 
-## Getting started
+- `--checkm2_db` (default: `/data/pam/software/checkm2_db/uniref100.KO.1.dmnd`)
+- `--gunc_db` (default: `/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd`)
+- `--mdmcleaner_db` (default: `/data/pam/software/mdmcleaner/v1`)
+- `--gtdbtk_db` (default: `/data/pam/software/GTDBTk/release226`)
 
-For example pipeline input, please see [Generating a manifest](#generating-a-manifest).
+Other parameters:
 
-To run the pipeline on the Sanger HPC as a module replace `nextflow run main.nf` with the name of the tool. For instance, to see a help message:
-
-```
-module load qc_mags
-qc_mags --help
-```
-
-To run the pipeline from source (this repository):
-
-1.  Clone the repository.
-2.  Run with `docker`, use the path to the `-profile docker` option:
-
-    ```
-    nextflow run main.nf \
-        -profile docker \
-        --manifest test_data/manifest.csv \
-        --gtdbtk_db /absolute/path/to/gtdbtk_db
-        --checkm2_db path/to/checkm2_db \
-        --gunc_db path/to/gunc_db \
-        --mdmcleaner_db path/to/mdmcleaner_db
-    ```
-
-    :warning: The path provided to `--gtdbtk_db` must be an absolute filepath.
-
-    Other profiles are also supported (`docker`, `singularity`).  
-    :warning: If no profile is specified the pipeline will run with a Sanger HPC-specific configuration.
-
-    See [usage](#usage) for all available pipeline options.
-
-## Generating a manifest
-
-The CSV manifest provided via the `--manifest` option should have the following format:
-
-| ID        | mags_dir                                                  |
-| --------- | --------------------------------------------------------- |
-| Sample ID | Directory containing binned MAG assemblies (fasta format) |
+- `--fasta_ext` (default: `fa`): Set the expected extension of fasta files in the input directories.
+- `--report_config` (default: [`./assets/report_config.json`](./assets/report_config.json)). See [Report configuration](#report-configuration) for more details.
+- `--autoqc_config` (default: null) Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at `./assorted-sub-workflows/qc_mags/assets/autoqc_config.json`. See [AutoQC configuration](#autoqc-configuration) for more details.
+- `--min-contig` (default: 1000 (Note that QUAST will ignore contigs below the set threshold but does not take into account the effects of MDMCleaner))
+- `--skip_raw_reports` (default: false) Skip publishing raw reports from various QC tools, keeping only final summary reports.
 
 ## Configuration
 
@@ -77,14 +49,14 @@ A configuration file can be supplied to the `--report_config` option to customis
 }
 ```
 
-Please refer to the default [`report_config.json`](./assorted-sub-workflows/qc_mags/assets/report_config.json) for expected JSON structure.
+Please refer to the default [`report_config.json`](./assets/report_config.json) for expected JSON structure.
 
 NOTE: In addition to columns derived from the tool reports, the script includes 4 columns `preqc_genome_name`, `postqc_genome_name`, `sample_or_strain_name` and `genome_status`. These are currently all derived from filenames (at some point).
 
 | column                | description                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------- |
 | preqc_genome_name     | Name of the input fasta file minus extension                                             |
-| post_genome_name      | Name of the fasta file output after processing with `seqkit` minus extension             |
+| postqc_genome_name    | Name of the fasta file output after processing with `seqkit` minus extension             |
 | sample_or_strain_name | Name of the fasta file up to the last `_` character                                      |
 | genome_status         | `mag` if the fasta file contains the string `mag` (lower/uppercase), `isolate` otherwise |
 
@@ -92,7 +64,7 @@ NOTE: In addition to columns derived from the tool reports, the script includes 
 
 It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
 
-To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv) is used.
+To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](../mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
 
 The default AutoQC config's pass criteria are:
 
@@ -119,46 +91,26 @@ If writing a custom AutoQC config the filterable columns with the default report
 - gunc_preqc_n_contigs
 - gunc_preqc_pass.GUNC
 
-If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep_column from the report config seperated by an underscore i.e. &lt;tool&gt;\_&lt;keep_column&gt;. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. &lt;tool&gt;\_&lt;qc_stage&gt;\_&lt;keep_column&gt;, as shown in the filterable column list above.
+If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep*column from the report config separated by an underscore. i.e. `<tool>*<keep*column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>*<qc*stage>*<keep_column>`, as shown in the filterable column list above.
 
 Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
 
-## Usage
+### Inputs
 
-```
- Database options
-      These parameters set paths to various databases used by the qc_mags workflow
+- (Metagenomic) assemblies per sample. Channel emitting elements `[meta, [1.fa, 2.fa, ...]]`, where meta is a map containing metadata (including the mandatory `ID`, tracking a sample ID).
 
-      --checkm2_db
-            default: /data/pam/software/checkm2_db/uniref100.KO.1.dmnd
-            Path to checkm2 diamond database file
-      --gunc_db
-            default: /data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd
-            Path to GUNC diamond database file
-      --mdmcleaner_db
-            default: /data/pam/software/mdmcleaner/v1
-            Path to MDMCleaner database directory
-      --gtdbtk_db
-            default: /data/pam/software/GTDBTk/release226
-            Path to gtdbtk database directory
------------------------------------------------------------------
- Other options
-      --fasta_ext
-            default: fa
-            Rename fasta output files using the given extension
-      --report_config
-            default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
-            Configuration file (JSON) to customise summary report
-      --autoqc_config
-            default: null
-            Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at `./assorted-sub-workflows/qc_mags/assets/autoqc_config.json`. See [AutoQC configuration](#autoqc-configuration) for more details.
+### Outputs
 
+- (Binned) assemblies, each corresponding to a taxonomic unit, that have been decontaminated using MDMCleaner. These decontaminated assemblies are also filtered (sequences less than 1000 bases long are removed). Both sets of assemblies are retained.
+- Reports generated by CheckM2, GTDB-Tk, GUNC and QUAST.
+- Summary report TSV per-sample (with customisable columns) combining individual reports from various pipeline tools.
 
------------------------------------------------------------------
- Logging options
-      --monochrome_logs
-            default: false
-            Should logs appear in plain ASCII
+### Dependencies
 
------------------------------------------------------------------
-```
+All dependencies are containerised. The [report.py](./bin/report.py) is used for the `REPORTING` process to generate the TSV summary.
+
+### Troubleshooting
+
+If a process in the pipeline fails with a non-zero exit code that is not recognised as a signal that memory or runtime limits were reached, the process will not be re-run and will be ignored. To understand why it has been ignored, please check the process-specific log file `.command.log` in the work directory of the affected process.
+
+On the Sanger farm (HPC), a post-run script is available to automatically show the end of these log files (where informative messages can often be found) and return affected sample identifiers. See [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/PaMI/pages/181078206/General+pipeline+info#Generalpipelineinfo-Usingthepipelinetracefile) for more details.
