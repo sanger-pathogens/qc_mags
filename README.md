@@ -172,8 +172,8 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             default: false
             Skip publishing raw reports from various QC tools, keeping only final summary reports.
       --temp_file_storage
-            default: "null",
-            Specify a directory where GTDBTk can store temporary files during processing (see GTDB-Tk runtime for more information). Options are '/dev/shm' and '/tmp'.
+            default: "/tmp",
+            Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory). See [GTDB-Tk runtime](#gdtbk-runtime) for more details.
       --temp_space":
             default: "30GB",
             "Request a specific amount of temporary working space to reserve for GTDB-T (see GTDB-Tk runtime for more information)."
