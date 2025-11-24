@@ -1,20 +1,26 @@
-# qc_mags
+# QC MAGs
 
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A521.04.0-23aa62.svg?labelColor=000000)](https://www.nextflow.io/)
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-This workflow performs assembly quality control, with a focus on metagenome-assembled genomes (MAGs).
+QC MAGs is a nextflow pipeline that assesses the quality of Metagenome Assembled Genomes (MAGs).
 
-## Pipeline Summary
+[[_TOC_]]
 
-It runs the following steps on the assembly (`fasta` files):
+## Pipeline summary
 
-1. **gtdbtk classify_wf and QUAST**: Assemblies are classified using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped. [QUAST](https://github.com/ablab/quast) evaluates genome/metagenome assemblies by computing various metrics.
-2. **checkm2 and GUNC**: [CheckM2](https://github.com/chklovski/CheckM2) is used to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination.
-3. **MDMCleaner**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) is used to remove contaminants and provide reliable contig classification of metagenome assembled genomes (MAGs). Sequences that are less than 1000 bases long are removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
-4. **checkm2 and GUNC**: The same checkm2 and GUNC commands (stage 2) are run on the seqkit fasta outputs.
-5. **Reporting** A summary CSV report is created that combines the summary files of checkm2, gtdbtk and GUNC runs (both before and after decontamination with MDMCleaner).
+The pipeline runs a number of QC tools to classify the bins and predict contamination levels for binned MAGs (fasta format).
+
+In its simplest usage, **QC MAGs** takes a manifest (CSV; see [Generating a manifest](#generating-a-manifest)), and paths to databases for several tools as input. It then runs the following steps on the MAG bins (`fasta` files) within per-sample directories provided in the manifest:
+
+1. **gtdbtk classify_wf**: Assemblies are classified using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped.
+2. **QUAST, CheckM2 and GUNC**: [QUAST](https://github.com/ablab/quast) evaluates genome/metagenome assemblies by computing various metrics. [CheckM2](https://github.com/chklovski/CheckM2) is used to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination. This stage is the 'preqc'.
+3. **MDMCleaner and seqkit**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) is used to remove contaminant contigs and provide reliable contig classification of metagenome assembled genomes (MAGs). Sequences that are less than a user specified minimum length are also removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
+4. **QUAST, CheckM2 and GUNC**: The same commands as in stage 2 are run on the filtered fasta outputs (postqc).
+5. **Reporting** A summary CSV report is created that combines the summary files of QUAST, CheckM2 and GUNC runs both before and after decontamination with MDMCleaner and GTDBTk classification.
+
+Note: GTDBTk classification takes place once 'preqc', i.e. prior to contig filtering for length and contamination.
 
 ## Getting started
 
@@ -57,23 +63,6 @@ The CSV manifest provided via the `--manifest` option should have the following 
 | --------- | --------------------------------------------------------- |
 | Sample ID | Directory containing binned MAG assemblies (fasta format) |
 
-### Parameters
-
-Several parameters set paths to various databases used by pipeline tools:
-
-- `--checkm2_db` (default: `/data/pam/software/checkm2_db/uniref100.KO.1.dmnd`)
-- `--gunc_db` (default: `/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd`)
-- `--mdmcleaner_db` (default: `/data/pam/software/mdmcleaner/v1`)
-- `--gtdbtk_db` (default: `/data/pam/software/GTDBTk/release226`)
-
-Other parameters:
-
-- `--fasta_ext` (default: `fa`): Set the expected extension of fasta files in the input directories.
-- `--report_config` (default: [`./assets/report_config.json`](./assets/report_config.json)). See [Report configuration](#report-configuration) for more details.
-- `--autoqc_config` (default: null) Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at `./assorted-sub-workflows/qc_mags/assets/autoqc_config.json`. See [AutoQC configuration](#autoqc-configuration) for more details.
-- `--min-contig` (default: 1000 (Note that QUAST will ignore contigs below the set threshold but does not take into account the effects of MDMCleaner))
-- `--skip_raw_reports` (default: false) Skip publishing raw reports from various QC tools, keeping only final summary reports.
-
 ## Configuration
 
 ### Report configuration
@@ -90,18 +79,19 @@ A configuration file can be supplied to the `--report_config` option to customis
 }
 ```
 
-Please refer to the default [`report_config.json`](./assets/report_config.json) for expected JSON structure.
+Please refer to the default [`report_config.json`](./assorted-sub-workflows/qc_mags/assets/report_config.json) for expected JSON structure.
 
 NOTE: In addition to columns derived from the tool reports, the script includes 4 columns `preqc_genome_name`, `postqc_genome_name`, `sample_or_strain_name` and `genome_status`. These are currently all derived from filenames (at some point).
 
 | column                | description                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------- |
 | preqc_genome_name     | Name of the input fasta file minus extension                                             |
-| postqc_genome_name    | Name of the fasta file output after processing with `seqkit` minus extension             |
+| postqc_genome_name    | Name of the fasta file output after contig filtering minus extension                     |
 | sample_or_strain_name | Name of the fasta file up to the last `_` character                                      |
 | genome_status         | `mag` if the fasta file contains the string `mag` (lower/uppercase), `isolate` otherwise |
 
 The default columns included in the final report are as follows:
+
 _General_
 
 - preqc_genome_name
@@ -163,7 +153,7 @@ If using `autoqc` ensure your report config includes the column you wish to filt
 
 It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
 
-To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assets/autoqc_config.tsv) is used.
+To apply this function, you must enable AutoQC by supplying a configuration file path to `--autoqc_config` (config as described [here](./assorted-sub-workflows/mixed_input/README.md#filter_metadatapy)) or by supplying the string "default" so that the default [autoqc_config.tsv](./assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv) is used.
 
 The default AutoQC config's pass criteria are:
 
@@ -171,26 +161,7 @@ The default AutoQC config's pass criteria are:
 - Under 5% Contamination
 - Passes GUNC contamination checks
 
-If writing a custom AutoQC config the filterable columns with the default report config are:
-
-- preqc_genome_name
-- postqc_genome_name
-- sample_or_strain_name
-- genome_status
-- checkm2_postqc_Completeness
-- checkm2_postqc_Contamination
-- checkm2_postqc_Genome_Size
-- checkm2_preqc_Completeness
-- checkm2_preqc_Contamination
-- checkm2_preqc_Genome_Size
-- gtdbtk_classification
-- gtdbtk_closest_genome_reference
-- gunc_postqc_n_contigs
-- gunc_postqc_pass.GUNC
-- gunc_preqc_n_contigs
-- gunc_preqc_pass.GUNC
-
-If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and `keep_column` from the report config separated by an underscore. i.e. `<tool>_<keep_column>`. Note that for adding filters based on CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. `<tool>_<qc_stage>_<keep_column>`, as shown in the filterable column list above.
+It is possible to add filtering rules to the autoqc config for any columns within the report config. If using a custom report config you can customise your AutoQC config: for the column using the tool name (lowercase) and keep_column from the report config seperated by an underscore i.e. &lt;tool&gt;\_&lt;keep_column&gt;. Note that for adding filters based on QUAST, CheckM2 or GUNC you must specify whether to use preqc or postqc reports i.e. &lt;tool&gt;\_&lt;qc_stage&gt;\_&lt;keep_column&gt;, as shown in the [Report configuration](#report-configuration) section.
 
 Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
 
@@ -222,19 +193,19 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             Configuration file (JSON) to customise summary report
       --autoqc_config
             default: null
-            Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string 'default' use the provided config.
-      --min_contig
-            default: 0
-            Configure the lower threshold for a contig level (in bp). Shorter contigs won't be taken into account, unless required in specific metrics.
+            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at ./assorted-sub-workflows/qc_mags/assets/autoqc_config.json
+      --min-contig
+            default: 1000
+            Contigs below this length will be filtered out by seqkit
       --skip_raw_reports
             default: false
-            Skip publishing raw reports from various QC tools, keeping only final summary reports.
+            Skip publishing raw reports from various QC tools, keeping only final summary reports
       --temp_file_storage
-            default: "/tmp",
-            Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory). See [GTDB-Tk runtime](#gdtbk-runtime) for more details.
-      --temp_space":
-            default: "30GB",
-            "Request a specific amount of temporary working space to reserve for GTDB-T (see GTDB-Tk runtime for more information)."
+            default: `/tmp`
+            Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory)
+      --temp_space
+            default: `30GB`
+            Request a specific amount of temporary working space to reserve for GTDB-Tk
 
 -----------------------------------------------------------------
  Logging options
@@ -245,20 +216,26 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
 -----------------------------------------------------------------
 ```
 
+### Inputs
+
+- (Metagenomic) assemblies per sample
+
 ### Outputs
 
-- (Binned) assemblies, each corresponding to a taxonomic unit, that have been decontaminated using MDMCleaner. These decontaminated assemblies are also filtered (sequences less than 1000 bases long are removed). Both sets of assemblies are retained.
-- Reports generated by CheckM2, GTDB-Tk, GUNC and QUAST.
-- Summary report TSV per-sample (with customisable columns) combining individual reports from various pipeline tools.
+- (Binned) assemblies, each corresponding to a taxonomic unit, that have been decontaminated using MDMCleaner and filtered for contig length according to `min_contig`. If using `autoqc` these are sorted into `pass` and `fail` directories.
+- Reports generated by CheckM2, GTDB-Tk, GUNC and QUAST (unless using `--skip_raw_reports`).
+- Final report TSV per-sample (with customisable columns) combining individual reports from various pipeline tools.
+- Summary TSV of contigs filtered out per sample per bin. Please note that the small contigs (below `min_contig`) are calculated first, the contigs MDMCleaner-failed contigs are only those removed despite their length being above `min_contig`.
 
 ### GTDB-Tk runtime
 
-- Runtime and memory can be reduced for GTDB-Tk classficiation by specifying the `--temp_file_storage` option with either `/tmp` or `/dev/shm`. Writing these files to disk instead of keeping everything in memory reduces peak RAM usage by up to 89% and can improve runtime by up to 10%. This often allows the job to run with a smaller memory request, meaning it can start faster on cluster schedulers.
-- If you know the size of your samples you can request a specific temp memory using `--tmp_space <XX>GB`. This lets you reserve a specific amount of temporary memory/disk space. Note that due to a know bug reported in the farm documentation, request half the memory you require as LSF double-accounts /tmp use see [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/FARM/pages/101361225/Useful+LSF+resources#UsefulLSFresources-Resources).
+Runtime and memory are reduced for GTDB-Tk classficiation with the `--temp_file_storage` option, which enables GTDBTk to write intermediate files to a specified location on disk rather than using RAM. This can reduce peak RAM usage by up to 89% and can improve runtime by up to 10%, often allowing the job to run with a smaller memory request, meaning it can start faster on cluster schedulers. On the Sanger cluster this is best done utilising `/tmp` and is therefore the default, `/dev/shm` is another option but is not reservable with LSF and a less stable option. Adapt this option as necessary when running outside of the Sanger cluster.
+
+If you want to configure reserved temporary storage to request with LSF (i.e. when using `--temp_file_storage /tmp`) you can do this by requesting an amount (in GB) with the option `--temp_space`. Typically you should request < 100 GB, and no more then 1000 GB, as larger requests may cause jobs to remain pending. Note that due to a known bug reported in the farm documentation, please request half the memory you require as LSF double-accounts /tmp use see [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/FARM/pages/101361225/Useful+LSF+resources#UsefulLSFresources-Resources).
 
 ### Dependencies
 
-All dependencies are containerised. The [report.py](./bin/report.py) is used for the `REPORTING` process to generate the TSV summary.
+All software dependencies are containerised. Databases must be made available for CheckM2, GUNC, MDMCleaner and GTDBTk, paths supplied by params if not using the defaults.
 
 ### Troubleshooting
 
