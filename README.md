@@ -8,6 +8,8 @@ QC MAGs is a nextflow pipeline that assesses the quality of Metagenome Assembled
 
 [[_TOC_]]
 
+![workflow diagram](assets/qc_mags_workflow_diagram.drawio.png)
+
 ## Pipeline summary
 
 The pipeline runs a number of QC tools to classify the bins and predict contamination levels for binned MAGs (fasta format).
