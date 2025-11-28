@@ -198,7 +198,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
       --autoqc_config
             default: null
             Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at ./assorted-sub-workflows/qc_mags/assets/autoqc_config.json
-      --min-contig
+      --min_contig
             default: 1000
             Contigs below this length will be filtered out by seqkit
       --skip_raw_reports
