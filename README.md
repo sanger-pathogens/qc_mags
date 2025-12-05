@@ -175,7 +175,14 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
 
 ## Usage
 
+### Parameters
+
 ```
+ Input options
+      --manifest
+            default: "null",
+            Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line
+ -----------------------------------------------------------------
  Database options
       These parameters set paths to various databases used by the qc_mags workflow
 
@@ -201,7 +208,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             Configuration file (JSON) to customise summary report
       --autoqc_config
             default: null
-            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided [config](./assorted-sub-workflows/qc_mags/assets/autoqc_config.json)
+            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at ./assorted-sub-workflows/qc_mags/assets/autoqc_config.json
       --min_contig
             default: 1000
             Contigs below this length will be filtered out by seqkit
@@ -213,8 +220,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory)
       --temp_space
             default: `30GB`
-            Request a specific amount of temporary working space to reserve for GTDB-Tk jobs when submitted on a HPC (only relevant in combination with `temp_file_storage` having a value other than `null`
-
+            Request a specific amount of temporary working space to reserve for GTDB-Tk jobs when submitted on a HPC (only relevant in combination with `temp_file_storage` having a value other than `null`)
 -----------------------------------------------------------------
  Logging options
       --monochrome_logs
@@ -223,6 +229,8 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
 
 -----------------------------------------------------------------
 ```
+
+Derived from the [QC MAGs subworkflow documentation](./assorted-sub-workflows/qc_mags/README.md).
 
 ### Inputs
 
