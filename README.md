@@ -16,7 +16,7 @@ The pipeline runs a number of QC tools to classify the bins and predict contamin
 
 In its simplest usage, **QC MAGs** takes a manifest (CSV; see [Generating a manifest](#generating-a-manifest)), and paths to databases for several tools as input. It then runs the following steps on the MAG bins (`fasta` files) within per-sample directories provided in the manifest:
 
-1. **gtdbtk classify_wf**: Assemblies are classified using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped.
+1. **gtdbtk classify_wf**: Assemblies are classified taxonomically using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped.
 2. **QUAST, CheckM2 and GUNC**: [QUAST](https://github.com/ablab/quast) evaluates genome/metagenome assemblies by computing various metrics. [CheckM2](https://github.com/chklovski/CheckM2) is used to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination. This stage is the 'preqc'.
 3. **MDMCleaner and seqkit**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) is used to remove contaminant contigs and provide reliable contig classification of metagenome assembled genomes (MAGs). Sequences that are less than a user specified minimum length are also removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
 4. **QUAST, CheckM2 and GUNC**: The same commands as in stage 2 are run on the filtered fasta outputs (postqc).
@@ -197,7 +197,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             Configuration file (JSON) to customise summary report
       --autoqc_config
             default: null
-            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at ./assorted-sub-workflows/qc_mags/assets/autoqc_config.json
+            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided [config](./assorted-sub-workflows/qc_mags/assets/autoqc_config.json)
       --min_contig
             default: 1000
             Contigs below this length will be filtered out by seqkit
@@ -209,7 +209,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
             Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory)
       --temp_space
             default: `30GB`
-            Request a specific amount of temporary working space to reserve for GTDB-Tk
+            Request a specific amount of temporary working space to reserve for GTDB-Tk jobs when submitted on a HPC (only relevant in combination with `temp_file_storage` having a value other than `null`
 
 -----------------------------------------------------------------
  Logging options
@@ -222,7 +222,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
 
 ### Inputs
 
-- (Metagenomic) assemblies per sample
+- (Metagenomic) assemblies in fasta format, grouped in folders per sample
 
 ### Outputs
 
@@ -233,7 +233,7 @@ Please note - if you add the parameter `--autoqc_config` but do not supply eithe
 
 ### GTDB-Tk runtime
 
-Runtime and memory are reduced for GTDB-Tk classficiation with the `--temp_file_storage` option, which enables GTDBTk to write intermediate files to a specified location on disk rather than using RAM. This can reduce peak RAM usage by up to 89% and can improve runtime by up to 10%, often allowing the job to run with a smaller memory request, meaning it can start faster on cluster schedulers. On the Sanger cluster this is best done utilising `/tmp` and is therefore the default, `/dev/shm` is another option but is not reservable with LSF and a less stable option. Adapt this option as necessary when running outside of the Sanger cluster.
+Runtime and memory are reduced for GTDB-Tk classficiation when setting the `--temp_file_storage` option to a value other than `null`, which enables GTDBTk to write intermediate files to a specified location on disk rather than using RAM. This can reduce peak RAM usage by up to 89% and can improve runtime by up to 10%, often allowing the job to run with a smaller memory request, meaning it can start faster on cluster schedulers. On the Sanger cluster this is best done utilising `/tmp` and is therefore the default; `/dev/shm` is another option but is not reservable with LSF and a less stable option. Adapt this option as necessary when running outside of the Sanger cluster.
 
 If you want to configure reserved temporary storage to request with LSF (i.e. when using `--temp_file_storage /tmp`) you can do this by requesting an amount (in GB) with the option `--temp_space`. Typically you should request < 100 GB, and no more then 1000 GB, as larger requests may cause jobs to remain pending. Note that due to a known bug reported in the farm documentation, please request half the memory you require as LSF double-accounts /tmp use see [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/FARM/pages/101361225/Useful+LSF+resources#UsefulLSFresources-Resources).
 
