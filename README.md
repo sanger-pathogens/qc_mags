@@ -29,6 +29,7 @@ Note: GTDBTk classification takes place once 'preqc', i.e. prior to contig filte
 For example pipeline input, please see [Generating a manifest](#generating-a-manifest).
 
 ### On the Sanger HPC
+
 To run the pipeline on the Sanger HPC as a module replace `nextflow run main.nf` with the name of the tool. For instance, to see a help message:
 
 ```
@@ -37,6 +38,7 @@ qc_mags --help
 ```
 
 ### From source
+
 To run the pipeline from source (this repository):
 
 1.  Clone the repository.
