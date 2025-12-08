@@ -1,6 +1,12 @@
 {
   "pipeline": "qc_mags",
   "params": {
+    "Input options": {
+      "manifest": {
+        "default": "null",
+        "help_text": "Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line"
+      }
+    },
     "Logging options": {
       "monochrome_logs": {
         "default": "false",

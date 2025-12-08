@@ -1,2 +1,9 @@
+fileignoreconfig:
+  # Ignoring both as base64-encoding makes the image content flag as potential secrets
+  - filename: "assets/qc_mags_workflow_diagram.drawio"
+    ignore_detectors: [filecontent]
+  - filename: "assets/qc_mags_workflow_diagram.drawio.png"
+    ignore_detectors: [filecontent]
+
 threshold: medium
 version: "1.0"
