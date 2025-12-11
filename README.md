@@ -66,11 +66,8 @@ To run the pipeline from source (this repository):
 The CSV manifest provided via the `--manifest` option should have the following format:
 
 | ID        | mags_dir                                                                          |
-| --------- | --------------------------------------------------------------------------------- |
 | Sample_1  | Directory containing binned MAG assemblies generated from sample_1 (fasta format) |
-| --------- | --------------------------------------------------------------------------------- |
 | Sample_2  | Directory containing binned MAG assemblies generated from sample_2 (fasta format) |
-| --------- | --------------------------------------------------------------------------------- |
 | Sample_3  | Directory containing binned MAG assemblies generated from sample_3 (fasta format) |
 
 ## Configuration
