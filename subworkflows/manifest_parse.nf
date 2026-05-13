@@ -2,8 +2,6 @@
 // Check input manifest and produce assembly channels
 //
 
-counter = 0
-
 workflow MANIFEST_PARSE {
     take:
     manifest // file: /path/to/manifest.csv
