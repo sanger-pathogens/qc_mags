@@ -28,7 +28,7 @@ def validateManifest(manifestFile, batchSize) {
             def values = line.split(',')*.trim()
             def mags_dir = new File(values[magsIndex])
 
-            if (batchSize <= 0) {
+            if (batchSize == 0) {
                 def id = values[idIndex]
                 if (!id) throw new Exception("Missing ID at line ${lineNum+1}")
             }
