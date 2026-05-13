@@ -71,6 +71,8 @@ The CSV manifest provided via the `--manifest` option should have the following 
 | Sample_2  | Directory containing binned MAG assemblies generated from sample_2 (fasta format) |
 | Sample_3  | Directory containing binned MAG assemblies generated from sample_3 (fasta format) |
 
+The `--recursive` flag can be used in conjunction with the manifest to search each listed directory, automatically discovering all MAGs beneath the specified root paths rather than only those at the top level. Duplicate MAGs resolved to the same path across multiple entries are deduplicated prior to processing. When using this option, specifying `--batch_size` is required to ensure MAG counts per batch remain within sensible bounds — see [Batching large runs](#batching-large-runs).
+
 ## Configuration
 
 ### Report configuration
@@ -260,3 +262,19 @@ All software dependencies are containerised. Databases must be made available fo
 If a process in the pipeline fails with a non-zero exit code that is not recognised as a signal that memory or runtime limits were reached, the process will not be re-run and will be ignored. To understand why it has been ignored, please check the process-specific log file `.command.log` in the work directory of the affected process.
 
 On the Sanger farm (HPC), a post-run script is available to automatically show the end of these log files (where informative messages can often be found) and return affected sample identifiers. See [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/PaMI/pages/181078206/General+pipeline+info#Generalpipelineinfo-Usingthepipelinetracefile) for more details.
+
+### Batching large runs
+
+Many of the tools within the pipeline benefit from processing multiple MAGs simultaneously. To enable cross-sample batching, specify a `batch_size` using the flag:
+
+```bash
+--batch_size <INT>
+```
+
+This flag aggregates MAGs across samples into batches of N, with any remainder assigned to a final batch. For example, to define batches of 2000:
+
+```bash
+--batch_size 2000
+```
+
+Batch size involves a trade-off between throughput and resource usage. Larger batches improve computational efficiency but increase run-time per job, while smaller batches can reduce latency — particularly on an uncontested cluster — but at the cost of significantly higher memory overhead. Note that batches below ~1000 MAGs may incur disproportionate database loading overhead relative to actual QC compute time. A batch size of 1000–2000 MAGs is recommended for most use cases to strike a balance.
