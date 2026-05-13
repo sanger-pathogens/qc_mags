@@ -65,11 +65,11 @@ To run the pipeline from source (this repository):
 
 The CSV manifest provided via the `--manifest` option should have the following format:
 
-| ID        | mags_dir                                                                          |
-| --------- | --------------------------------------------------------------------------------- |
-| Sample_1  | Directory containing binned MAG assemblies generated from sample_1 (fasta format) |
-| Sample_2  | Directory containing binned MAG assemblies generated from sample_2 (fasta format) |
-| Sample_3  | Directory containing binned MAG assemblies generated from sample_3 (fasta format) |
+| ID       | mags_dir                                                                          |
+| -------- | --------------------------------------------------------------------------------- |
+| Sample_1 | Directory containing binned MAG assemblies generated from sample_1 (fasta format) |
+| Sample_2 | Directory containing binned MAG assemblies generated from sample_2 (fasta format) |
+| Sample_3 | Directory containing binned MAG assemblies generated from sample_3 (fasta format) |
 
 The `--recursive` flag can be used in conjunction with the manifest to search each listed directory, automatically discovering all MAGs beneath the specified root paths rather than only those at the top level. Duplicate MAGs resolved to the same path across multiple entries are deduplicated prior to processing. When using this option, specifying `--batch_size` is required to ensure MAG counts per batch remain within sensible bounds — see [Batching large runs](#batching-large-runs).
 
