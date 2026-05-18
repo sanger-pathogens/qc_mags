@@ -49,11 +49,11 @@ workflow {
     }
 
     manifest = Channel.fromPath(
-        validateManifest(params.manifest)
+        validateManifest( params.manifest, params.batch_size )
     )
-    MANIFEST_PARSE(manifest)
 
-    QC_MAGS(MANIFEST_PARSE.out.fastas)
+    MANIFEST_PARSE(manifest)
+    | QC_MAGS
 }
 
 workflow.onComplete {
