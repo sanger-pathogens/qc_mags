@@ -7,10 +7,13 @@ workflow MANIFEST_PARSE {
     manifest // file: /path/to/manifest.csv
 
     main:
+
+    def counter = 0
+
     manifest
         .ifEmpty { exit 1, "File is empty / Cannot find file at ${manifest}" }
         .splitCsv(header:true, strip:true, sep:',')
-        .map { row -> parse_row(row) }
+        .map { row -> parse_row(row, counter++) }
         .transpose()
         .tap { all_fastas }
         .unique { meta, fasta -> fasta.toString() }
@@ -27,19 +30,17 @@ workflow MANIFEST_PARSE {
     fastas
 }
 
-def parse_row(HashMap row) {
+def parse_row(HashMap row, int index) {
     def meta = [:]
     def fastas = null
 
     String fasta_ext = params.fasta_ext.replaceAll(/^\./, '')
 
-    def counter = 0
-
     /*
         This is just a placeholder ID as if batch processing is not being used, 
         the ID column is not required.
     */
-    meta.ID = row.ID ?: "sample_${counter++}"
+    meta.ID = row.ID ?: "sample_${index}"
     
     if (params.recursive) {
         fastas = [
