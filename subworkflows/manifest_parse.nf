@@ -33,6 +33,7 @@ def parse_row(HashMap row) {
 
     String fasta_ext = params.fasta_ext.replaceAll(/^\./, '')
 
+    def counter = 0
 
     /*
         This is just a placeholder ID as if batch processing is not being used, 
