@@ -115,37 +115,37 @@ results/
 
 **Database options**
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `--checkm2_db` | `path` | `/data/pam/software/checkm2_db/uniref100.KO.1.dmnd` | Path to the CheckM2 Diamond database file. |
-| `--gunc_db` | `path` | `/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd` | Path to the GUNC Diamond database file. |
-| `--mdmcleaner_db` | `path` | `/data/pam/software/mdmcleaner/v1` | Path to the MDMCleaner database directory. |
-| `--gtdbtk_db` | `path` | `/data/pam/software/GTDBTk/release226` | Path to the GTDBTk database directory. |
+| Option            | Type   | Default                                             | Description                                |
+| ----------------- | ------ | --------------------------------------------------- | ------------------------------------------ |
+| `--checkm2_db`    | `path` | `/data/pam/software/checkm2_db/uniref100.KO.1.dmnd` | Path to the CheckM2 Diamond database file. |
+| `--gunc_db`       | `path` | `/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd`  | Path to the GUNC Diamond database file.    |
+| `--mdmcleaner_db` | `path` | `/data/pam/software/mdmcleaner/v1`                  | Path to the MDMCleaner database directory. |
+| `--gtdbtk_db`     | `path` | `/data/pam/software/GTDBTk/release226`              | Path to the GTDBTk database directory.     |
 
 ---
 
 **Other options**
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `--fasta_ext` | `string` | `fa` | File extension for output FASTA files. |
-| `--min_contig` | `integer` | `0` | Minimum contig length (bp). Contigs below this threshold are removed after decontamination. |
-| `--report_config` | `path` | (bundled) | JSON configuration file for the summary report. |
-| `--autoqc_config` | `path` | `null` | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config. |
-| `--skip_raw_reports` | `boolean` | `false` | Skip publishing raw tool reports; only the final summary CSV is published. |
-| `--temp_file_storage` | `string` | `/tmp` | Directory for GTDBTk temporary files. Options: `/tmp`, `/dev/shm`, or `null` (write to memory). |
-| `--temp_space` | `string` | `30GB` | Amount of temporary storage to reserve for GTDBTk jobs on the HPC. |
-| `--batch_size` | `integer` | `0` | Number of MAGs to process per batch for tools that support batching. `0` batches per sample ID. |
+| Option                | Type      | Default   | Description                                                                                                 |
+| --------------------- | --------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| `--fasta_ext`         | `string`  | `fa`      | File extension for output FASTA files.                                                                      |
+| `--min_contig`        | `integer` | `0`       | Minimum contig length (bp). Contigs below this threshold are removed after decontamination.                 |
+| `--report_config`     | `path`    | (bundled) | JSON configuration file for the summary report.                                                             |
+| `--autoqc_config`     | `path`    | `null`    | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config. |
+| `--skip_raw_reports`  | `boolean` | `false`   | Skip publishing raw tool reports; only the final summary CSV is published.                                  |
+| `--temp_file_storage` | `string`  | `/tmp`    | Directory for GTDBTk temporary files. Options: `/tmp`, `/dev/shm`, or `null` (write to memory).             |
+| `--temp_space`        | `string`  | `30GB`    | Amount of temporary storage to reserve for GTDBTk jobs on the HPC.                                          |
+| `--batch_size`        | `integer` | `0`       | Number of MAGs to process per batch for tools that support batching. `0` batches per sample ID.             |
 
 ---
 
 **Output options**
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `--outdir` | `path` | `./results` | Directory where results are written. |
-| `--recursive` | `boolean` | `false` | Search input directories recursively for FASTA files. |
-| `--monochrome_logs` | `boolean` | `false` | Output logs in plain ASCII. |
+| Option              | Type      | Default     | Description                                           |
+| ------------------- | --------- | ----------- | ----------------------------------------------------- |
+| `--outdir`          | `path`    | `./results` | Directory where results are written.                  |
+| `--recursive`       | `boolean` | `false`     | Search input directories recursively for FASTA files. |
+| `--monochrome_logs` | `boolean` | `false`     | Output logs in plain ASCII.                           |
 
 ### Advanced usage
 
@@ -168,14 +168,14 @@ All software dependencies are containerised. The following databases must be ava
 
 ## Software versions
 
-| Software | Version | Image |
-| --- | --- | --- |
-| GTDBTk | — | `quay.io/biocontainers/gtdbtk:*` |
-| QUAST | — | `quay.io/biocontainers/quast:*` |
-| CheckM2 | — | `quay.io/biocontainers/checkm2:*` |
-| GUNC | — | `quay.io/biocontainers/gunc:*` |
-| MDMCleaner | — | `quay.io/biocontainers/mdmcleaner:*` |
-| seqkit | — | `quay.io/biocontainers/seqkit:*` |
+| Software   | Version | Image                                |
+| ---------- | ------- | ------------------------------------ |
+| GTDBTk     | —       | `quay.io/biocontainers/gtdbtk:*`     |
+| QUAST      | —       | `quay.io/biocontainers/quast:*`      |
+| CheckM2    | —       | `quay.io/biocontainers/checkm2:*`    |
+| GUNC       | —       | `quay.io/biocontainers/gunc:*`       |
+| MDMCleaner | —       | `quay.io/biocontainers/mdmcleaner:*` |
+| seqkit     | —       | `quay.io/biocontainers/seqkit:*`     |
 
 See `assorted-sub-workflows/qc_mags/modules/` for pinned container versions.
 
