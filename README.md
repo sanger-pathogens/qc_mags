@@ -168,14 +168,14 @@ All software dependencies are containerised. The following databases must be ava
 
 ## Software versions
 
-| Software   | Version | Image                                |
-| ---------- | ------- | ------------------------------------ |
-| GTDBTk     | —       | `quay.io/biocontainers/gtdbtk:*`     |
-| QUAST      | —       | `quay.io/biocontainers/quast:*`      |
-| CheckM2    | —       | `quay.io/biocontainers/checkm2:*`    |
-| GUNC       | —       | `quay.io/biocontainers/gunc:*`       |
-| MDMCleaner | —       | `quay.io/biocontainers/mdmcleaner:*` |
-| seqkit     | —       | `quay.io/biocontainers/seqkit:*`     |
+| Software   | Version | Image                                                     |
+| ---------- | ------- | --------------------------------------------------------- |
+| GTDBTk     | 2.7.2   | `quay.io/biocontainers/gtdbtk:2.7.2--pyhdfd78af_0`        |
+| QUAST      | 5.3.0   | `quay.io/biocontainers/quast:5.3.0--py39pl5321heaaa4ec_0` |
+| CheckM2    | 1.0.2   | `quay.io/biocontainers/checkm2:1.0.2--pyh7cba7a3_0`       |
+| GUNC       | 1.0.6   | `quay.io/biocontainers/gunc:1.0.6--pyhdfd78af_0`          |
+| MDMCleaner | 0.8.7   | `quay.io/biocontainers/mdmcleaner:0.8.7--pyh7cba7a3_0`    |
+| seqkit     | 2.10.0  | `quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0`         |
 
 See `assorted-sub-workflows/qc_mags/modules/` for pinned container versions.
 
