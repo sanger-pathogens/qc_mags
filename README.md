@@ -94,21 +94,34 @@ Results are written to `--outdir` (default: `./results`):
 
 ```
 results/
-  gtdbtk/
-    <sample_ID>/                   # GTDBTk classification output
-  preqc/
-    quast/                         # QUAST pre-decontamination reports
-    checkm2/                       # CheckM2 pre-decontamination reports
-    gunc/                          # GUNC pre-decontamination reports
-  decontaminated/
-    <sample_ID>/
-      <bin>.fa                     # Decontaminated, length-filtered MAG FASTAs
-  postqc/
-    quast/                         # QUAST post-decontamination reports
-    checkm2/                       # CheckM2 post-decontamination reports
-    gunc/                          # GUNC post-decontamination reports
-  reports/
-    summary.csv                    # Combined pre/post QC summary with taxonomy
+  pre_qc/
+    gtdbtk/
+      <sample_ID>_gtdbtk_summary.tsv    # GTDBTk taxonomic classification summary (unless --skip_raw_reports)
+    quast/
+      <sample_ID>_pre_qc_quast_report.tsv   # QUAST pre-decontamination assembly statistics (unless --skip_raw_reports)
+    checkm2/
+      <sample_ID>_quality_report.tsv    # CheckM2 pre-decontamination completeness/contamination (unless --skip_raw_reports)
+    gunc/
+      <sample_ID>_gunc.tsv              # GUNC pre-decontamination chimerism report (unless --skip_raw_reports)
+  mdmcleaner/
+    <sample_ID>_filtered_kept_contigs.<ext>.gz    # MDMCleaner-decontaminated MAG FASTAs
+  seqkit/
+    cleaned_<bin>.<ext>               # Length-filtered MAG FASTAs (after --min_contig filtering)
+  post_qc/
+    quast/
+      <sample_ID>_post_qc_quast_report.tsv  # QUAST post-decontamination assembly statistics (unless --skip_raw_reports)
+    checkm2/
+      <sample_ID>_quality_report.tsv    # CheckM2 post-decontamination completeness/contamination (unless --skip_raw_reports)
+    gunc/
+      <sample_ID>_gunc.tsv              # GUNC post-decontamination chimerism report (unless --skip_raw_reports)
+  report/
+    <sample_ID>_final_report.tsv        # Combined pre/post QC and taxonomy summary
+    <sample_ID>_filter_summary.tsv      # Summary of contigs removed during filtering
+  pass/                                 # Only produced when --autoqc_config is set
+    fastas/
+      <bin>.<ext>                       # FASTAs for MAGs passing the autoQC thresholds
+    report/
+      <filtered_report>.tsv             # Report rows for passing MAGs
 ```
 
 ### Parameters
