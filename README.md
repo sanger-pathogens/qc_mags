@@ -83,7 +83,7 @@ bsub -o output.o -e error.e -q oversubscribed -R "select[mem>4000] rusage[mem=40
 A CSV file with per-sample paths to directories containing MAG FASTA files. Each row specifies a sample ID and the directory of bin FASTA files for that sample.
 
 ```
-ID,BIN_DIR
+ID,mags_dir
 sample1,/path/to/sample1/bins/
 sample2,/path/to/sample2/bins/
 ```
