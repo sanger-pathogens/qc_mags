@@ -151,17 +151,17 @@ results/
 
 **Other options**
 
-| Option                | Type      | Default   | Description                                                                                                 |
-| --------------------- | --------- | --------- | ----------------------------------------------------------------------------------------------------------- |
-| `--min_contig`        | `integer` | `0`       | Minimum contig length (bp). Contigs below this threshold are removed after decontamination.                 |
-| `--report_config`     | `path`    | (bundled) | JSON configuration file for the summary report.                                                             |
-| `--autoqc_config`     | `path`    | `null`    | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config. |
-| `--skip_raw_reports`  | `boolean` | `false`   | Skip publishing raw tool reports; only the final summary CSV is published.                                  |
-| `--temp_file_storage` | `string`  | `/tmp`    | Directory for GTDBTk temporary files. Options: `/tmp`, `/dev/shm`, or `null` (write to memory).             |
-| `--temp_space`        | `string`  | `30GB`    | Amount of temporary storage to reserve for GTDBTk jobs on the HPC.                                          |
-| `--batch_size`        | `integer` | `0`       | Number of MAGs to process per batch for tools that support batching. `0` batches per sample ID.             |
-| `--fasta_ext`         | `string`  | `fa`      | File extension for input and output FASTA files.                                                            |
-| `--skip_raw_reports`  | `boolean` | `false`   | Skip publishing raw tool reports; only the final summary CSV is published.                                  |
+| Option                | Type      | Default                                                                                       | Description                                                                                                                                                                                |
+| --------------------- | --------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--min_contig`        | `integer` | `0`                                                                                           | Minimum contig length (bp). Contigs below this threshold are removed after decontamination.                                                                                                |
+| `--report_config`     | `path`    | (bundled, [`report_config.json`](./assorted-sub-workflows/qc_mags/assets/report_config.json)) | JSON configuration file for the summary report.                                                                                                                                            |
+| `--autoqc_config`     | `path`    | `null`                                                                                        | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config [autoqc_config.tsv](./assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv). |
+| `--skip_raw_reports`  | `boolean` | `false`                                                                                       | Skip publishing raw tool reports; only the final summary CSV is published.                                                                                                                 |
+| `--temp_file_storage` | `string`  | `/tmp`                                                                                        | Directory for GTDBTk temporary files. Options: `/tmp`, `/dev/shm`, or `null` (write to memory).                                                                                            |
+| `--temp_space`        | `string`  | `30GB`                                                                                        | Amount of temporary storage to reserve for GTDBTk jobs on the HPC.                                                                                                                         |
+| `--batch_size`        | `integer` | `0`                                                                                           | Number of MAGs to process per batch for tools that support batching. `0` batches per sample ID.                                                                                            |
+| `--fasta_ext`         | `string`  | `fa`                                                                                          | File extension for input and output FASTA files.                                                                                                                                           |
+| `--skip_raw_reports`  | `boolean` | `false`                                                                                       | Skip publishing raw tool reports; only the final summary CSV is published.                                                                                                                 |
 
 ---
 
