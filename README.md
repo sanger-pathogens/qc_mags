@@ -293,7 +293,7 @@ Batch size involves a trade-off between throughput and resource usage. Larger ba
 
 #### GTDBTk temporary storage
 
-GTDBTk requires significant temporary disk space. By default `/tmp` is used. On the Sanger HPC, set `--temp_file_storage /dev/shm` for faster I/O. For large datasets, ensure enough space is available or set `--temp_space` appropriately.
+GTDBTk requires significant memory which can be reduced by using temporary disk space. By default `/tmp` is used, which is the best configuration for the Sanger HPC. On other machines you may wish to set `--temp_file_storage /dev/shm` for faster I/O, check with your administrators if unsure. Ensure enough space is available or set `--temp_space` appropriately.
 
 ### Dependencies
 
@@ -319,7 +319,7 @@ See `assorted-sub-workflows/qc_mags/modules/` for pinned container versions.
 
 ## Troubleshooting
 
-- **GTDBTk fails with out-of-disk-space**: ensure the `--temp_file_storage` directory has sufficient space. On the Sanger HPC, use `/dev/shm` or a scratch directory.
+- **GTDBTk fails with out-of-disk-space**: ensure the `--temp_file_storage` directory has sufficient space, allocated space is reserved through LSF with `--temp_space`.
 - **Database not found**: confirm that all database paths exist and are accessible. On the Sanger HPC, default paths are pre-configured.
 - **Resuming a failed run**: add `-resume` to your command to restart from cached intermediate results.
 - For further help, check `.nextflow.log` and the per-process `.command.log` logs in the `work/` directory.
