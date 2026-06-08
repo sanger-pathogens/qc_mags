@@ -295,10 +295,6 @@ Batch size involves a trade-off between throughput and resource usage. Larger ba
 
 GTDBTk requires significant temporary disk space. By default `/tmp` is used. On the Sanger HPC, set `--temp_file_storage /dev/shm` for faster I/O. For large datasets, ensure enough space is available or set `--temp_space` appropriately.
 
-#### Automatic QC filtering
-
-Supply `--autoqc_config` with a JSON config to automatically flag MAGs that meet user-defined completeness/contamination thresholds. Use `--autoqc_config default` to apply the bundled default thresholds.
-
 ### Dependencies
 
 All software dependencies are containerised. The following databases must be available locally (Sanger HPC defaults are pre-configured):
