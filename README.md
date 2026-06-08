@@ -328,6 +328,6 @@ Sanger users may find [this page](https://ssg-confluence.internal.sanger.ac.uk/s
 
 ## Issues and Contributions
 
-If you find an issue with this pipeline, or would like to suggest an improvement, please log an issue or open a pull request on this repository.
+**GitHub users:** if you find an issue with this pipeline, or would like to suggest an improvement, please log an issue or open a pull request on this repository.
 
-If you are at Sanger and need internal support, you can raise an issue on the PAM Freshservice portal: https://sanger.freshservice.com/support/catalog/items/426
+**Sanger users:** if you need internal support, you can raise an issue on the PAM Freshservice portal: https://sanger.freshservice.com/support/catalog/items/426
