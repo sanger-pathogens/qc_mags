@@ -4,78 +4,176 @@
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-QC MAGs is a nextflow pipeline that assesses the quality of Metagenome Assembled Genomes (MAGs).
-
 [[_TOC_]]
 
-![workflow diagram](assets/qc_mags_workflow_diagram.drawio.png)
+## Pipeline overview
 
-## Pipeline summary
+QC MAGs is a Nextflow DSL2 pipeline that assesses the quality of Metagenome-Assembled Genomes (MAGs). It is not suitable for isolate genomes; use [QC Isolates](../qc_isolates) for those.
 
-The pipeline runs a number of QC tools to classify the bins and predict contamination levels for binned MAGs (fasta format).
+![Workflow diagram](assets/qc_mags_workflow_diagram.drawio.png)
 
-In its simplest usage, **QC MAGs** takes a manifest (CSV; see [Generating a manifest](#generating-a-manifest)), and paths to databases for several tools as input. It then runs the following steps on the MAG bins (`fasta` files) within per-sample directories provided in the manifest:
+The pipeline performs the following steps:
 
-1. **gtdbtk classify_wf**: Assemblies are classified taxonomically using steps detailed in the [gtdbtk docs](https://ecogenomics.github.io/GTDBTk/commands/classify_wf.html). The `ani_screen` step is skipped.
-2. **QUAST, CheckM2 and GUNC**: [QUAST](https://github.com/ablab/quast) evaluates genome/metagenome assemblies by computing various metrics. [CheckM2](https://github.com/chklovski/CheckM2) is used to predict the completeness and contamination of genomic bins (independent of their taxonomic classification). [GUNC](https://github.com/grp-bork/gunc) is also run to check for chimerism and contamination. This stage is the 'preqc'.
-3. **MDMCleaner and seqkit**: [MDMCleaner](https://github.com/KIT-IBG-5/mdmcleaner) is used to remove contaminant contigs and provide reliable contig classification of metagenome assembled genomes (MAGs). Sequences that are less than a minimum length (see parameter `min_contig`) are also removed from the resulting filtered/decontaminated fastas using [seqkit](https://bioinf.shenwei.me/seqkit/).
-4. **QUAST, CheckM2 and GUNC**: The same commands as in stage 2 are run on the filtered fasta outputs (postqc).
-5. **Reporting** A summary CSV report is created that combines the summary files of QUAST, CheckM2 and GUNC runs both before and after decontamination with MDMCleaner and GTDBTk classification.
+1. **Taxonomic classification** — GTDBTk `classify_wf` classifies each MAG taxonomically (the `ani_screen` step is skipped).
+2. **Pre-decontamination QC** — QUAST evaluates assembly statistics; CheckM2 predicts completeness and contamination; GUNC checks for chimerism.
+3. **Decontamination** — MDMCleaner removes contaminant contigs from each MAG; seqkit subsequently removes contigs below the minimum length threshold.
+4. **Post-decontamination QC** — QUAST, CheckM2, and GUNC are re-run on the filtered MAG FASTAs.
+5. **Reporting** — a summary CSV is produced combining pre- and post-decontamination QC metrics and GTDBTk classification results.
 
-Note: GTDBTk classification takes place once 'preqc', i.e. prior to contig filtering for length and contamination.
+## Usage
 
-## Getting started
+### Quickstart
 
-For example pipeline input, please see [Generating a manifest](#generating-a-manifest).
+#### From source code
 
-### On the Sanger HPC
+1. Clone this repository (including submodules):
 
-To run the pipeline on the Sanger HPC as a module replace `nextflow run main.nf` with the name of the tool. For instance, to see a help message:
+   ```bash
+   git clone --recurse-submodules <repo-url>
+   cd qc_mags
+   ```
 
-```
+2. To run with `docker`, use the `-profile docker` option:
+
+   ```bash
+   nextflow run main.nf \
+       -profile docker \
+       --manifest manifest.csv \
+       --outdir my_output
+   ```
+
+   Other profiles are also supported (`singularity`).  
+   :warning: If no profile is specified the pipeline will run with the Sanger HPC-specific configuration.
+
+3. Once the run has finished successfully and you have inspected the output, clean up intermediate files. The `work/` directory and `.nextflow.log` are useful for troubleshooting — do not delete them until you are satisfied the outputs are correct:
+
+   ```bash
+   rm -rf work .nextflow*
+   ```
+
+   Alternatively, use `nextflow clean` for more fine-grained control over which runs and intermediate files are removed.
+
+#### Using on the Sanger farm
+
+First load the latest pipeline module:
+
+```bash
 module load qc_mags
+```
+
+Then run on the command line with `qc_mags <options>`. For instance, to see a help message:
+
+```bash
 qc_mags --help
 ```
 
-### From source
+Submit to LSF:
 
-To run the pipeline from source (this repository):
+```bash
+bsub -o output.o -e error.e -q oversubscribed -R "select[mem>4000] rusage[mem=4000]" -M4000 \
+    qc_mags \
+        --manifest manifest.csv \
+        --outdir my_output
+```
 
-1.  Clone the repository.
-2.  Run with `docker`, use the path to the `-profile docker` option:
+### Input
 
-    ```
-    nextflow run main.nf \
-        -profile docker \
-        --manifest test_data/manifest.csv \
-        --gtdbtk_db /absolute/path/to/gtdbtk_db
-        --checkm2_db path/to/checkm2_db \
-        --gunc_db path/to/gunc_db \
-        --mdmcleaner_db path/to/mdmcleaner_db
-    ```
+#### Manifest (`--manifest`)
 
-    :warning: The path provided to `--gtdbtk_db` must be an **absolute** filepath.
+A CSV file with per-sample paths to directories containing MAG FASTA files. Each row specifies a sample ID and the directory of bin FASTA files for that sample.
 
-    Other profiles are also supported (`docker`, `singularity`).  
-    :warning: If no profile is specified the pipeline will run with a Sanger HPC-specific configuration.
-
-    See [usage](#usage) for all available pipeline options.
-
-## Generating a manifest
-
-The CSV manifest provided via the `--manifest` option should have the following format:
-
-| ID       | mags_dir                                                                          |
-| -------- | --------------------------------------------------------------------------------- |
-| Sample_1 | Directory containing binned MAG assemblies generated from sample_1 (fasta format) |
-| Sample_2 | Directory containing binned MAG assemblies generated from sample_2 (fasta format) |
-| Sample_3 | Directory containing binned MAG assemblies generated from sample_3 (fasta format) |
+```
+ID,mags_dir
+sample1,/path/to/sample1/bins/
+sample2,/path/to/sample2/bins/
+```
 
 The `--recursive` flag can be used in conjunction with the manifest to search each listed directory, automatically discovering all MAGs beneath the specified root paths rather than only those at the top level. Duplicate MAGs resolved to the same path across multiple entries are deduplicated prior to processing. When using this option, specifying `--batch_size` is required to ensure MAG counts per batch remain within sensible bounds — see [Batching large runs](#batching-large-runs).
 
-## Configuration
+### Output
 
-### Report configuration
+Results are written to `--outdir` (default: `./results`):
+
+```
+results/
+  pre_qc/
+    gtdbtk/
+      <sample_ID>_gtdbtk_summary.tsv    # GTDBTk taxonomic classification summary (unless --skip_raw_reports)
+    quast/
+      <sample_ID>_pre_qc_quast_report.tsv   # QUAST pre-decontamination assembly statistics (unless --skip_raw_reports)
+    checkm2/
+      <sample_ID>_quality_report.tsv    # CheckM2 pre-decontamination completeness/contamination (unless --skip_raw_reports)
+    gunc/
+      <sample_ID>_gunc.tsv              # GUNC pre-decontamination chimerism report (unless --skip_raw_reports)
+  mdmcleaner/
+    <sample_ID>_filtered_kept_contigs.<ext>.gz    # MDMCleaner-decontaminated MAG FASTAs
+  seqkit/
+    cleaned_<bin>.<ext>               # Length-filtered MAG FASTAs (after --min_contig filtering)
+  post_qc/
+    quast/
+      <sample_ID>_post_qc_quast_report.tsv  # QUAST post-decontamination assembly statistics (unless --skip_raw_reports)
+    checkm2/
+      <sample_ID>_quality_report.tsv    # CheckM2 post-decontamination completeness/contamination (unless --skip_raw_reports)
+    gunc/
+      <sample_ID>_gunc.tsv              # GUNC post-decontamination chimerism report (unless --skip_raw_reports)
+  report/
+    <sample_ID>_final_report.tsv        # Combined pre/post QC and taxonomy summary
+    <sample_ID>_filter_summary.tsv      # Summary of contigs removed during filtering
+  pass/                                 # Only produced when --autoqc_config is set
+    fastas/
+      <bin>.<ext>                       # FASTAs for MAGs passing the autoQC thresholds
+    report/
+      <filtered_report>.tsv             # Report rows for passing MAGs
+```
+
+### Parameters
+
+**Input/ Output options**
+
+| Option        | Type      | Default     | Description                                                                                                             |
+| ------------- | --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `--manifest`  | `path`    | null        | Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line. |
+| `--recursive` | `boolean` | `false`     | Search input directories recursively for FASTA files.                                                                   |
+| `--outdir`    | `path`    | `./results` | Directory where results are written.                                                                                    |
+
+---
+
+**Database options**
+
+| Option            | Type   | Default                                             | Description                                |
+| ----------------- | ------ | --------------------------------------------------- | ------------------------------------------ |
+| `--checkm2_db`    | `path` | `/data/pam/software/checkm2_db/uniref100.KO.1.dmnd` | Path to the CheckM2 Diamond database file. |
+| `--gunc_db`       | `path` | `/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd`  | Path to the GUNC Diamond database file.    |
+| `--mdmcleaner_db` | `path` | `/data/pam/software/mdmcleaner/v1`                  | Path to the MDMCleaner database directory. |
+| `--gtdbtk_db`     | `path` | `/data/pam/software/GTDBTk/release226`              | Path to the GTDBTk database directory.     |
+
+---
+
+**Other options**
+
+| Option                | Type      | Default                                                                                       | Description                                                                                                                                                                                |
+| --------------------- | --------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--min_contig`        | `integer` | `0`                                                                                           | Minimum contig length (bp). Contigs below this threshold are removed after decontamination.                                                                                                |
+| `--report_config`     | `path`    | (bundled, [`report_config.json`](./assorted-sub-workflows/qc_mags/assets/report_config.json)) | JSON configuration file for the summary report.                                                                                                                                            |
+| `--autoqc_config`     | `path`    | `null`                                                                                        | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config [autoqc_config.tsv](./assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv). |
+| `--skip_raw_reports`  | `boolean` | `false`                                                                                       | Skip publishing raw tool reports; only the final summary CSV is published.                                                                                                                 |
+| `--temp_file_storage` | `string`  | `/tmp`                                                                                        | Directory for GTDBTk temporary files. Options: `/tmp`, `/dev/shm`, or `null` (write to memory).                                                                                            |
+| `--temp_space`        | `string`  | `30GB`                                                                                        | Amount of temporary storage to reserve for GTDBTk jobs on the HPC.                                                                                                                         |
+| `--batch_size`        | `integer` | `0`                                                                                           | Number of MAGs to process per batch for tools that support batching. `0` batches per sample ID.                                                                                            |
+| `--fasta_ext`         | `string`  | `fa`                                                                                          | File extension for input and output FASTA files.                                                                                                                                           |
+| `--skip_raw_reports`  | `boolean` | `false`                                                                                       | Skip publishing raw tool reports; only the final summary CSV is published.                                                                                                                 |
+
+---
+
+**Logging options**
+
+| Option              | Type      | Default | Description                 |
+| ------------------- | --------- | ------- | --------------------------- |
+| `--monochrome_logs` | `boolean` | `false` | Output logs in plain ASCII. |
+
+### Advanced usage
+
+#### Report configuration
 
 A configuration file can be supplied to the `--report_config` option to customise the final (per-sample) report generated by the pipeline. In particular, it allows (per-tool) customization of the identity column (to join the tool report tables together) and extract particular columns from these reports. The following tool names are currently mandatory: `QUAST`, `GTDBTK`, `GUNC`, `CHECKM2` (NOTE: tool name must be uppercase). In the following example config block, we select 2 columns (`classification` and `closest_genome_reference`) to extract from the GTDB-Tk report and to use `user_genome` as the identity column:
 
@@ -159,7 +257,7 @@ Please see output reports for these individual tools to see which columns you ca
 
 If using `autoqc` ensure your report config includes the column you wish to filter on. See below for more information.
 
-### AutoQC configuration
+#### AutoQC configuration
 
 It is also possible to automatically filter MAGs based on QC metrics produced in the summary report described in [Report configuration](#report-configuration).
 
@@ -177,93 +275,7 @@ It is possible to add filtering rules to the autoqc config for columns\* within 
 
 Please note - if you add the parameter `--autoqc_config` but do not supply either a valid config file path or "default" the pipeline will error on not being able to find a config file to use.
 
-## Usage
-
-### Parameters
-
-```
- Input options
-      --manifest
-            default: "null",
-            Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line
- -----------------------------------------------------------------
- Database options
-      These parameters set paths to various databases used by the qc_mags workflow
-
-      --checkm2_db
-            default: /data/pam/software/checkm2_db/uniref100.KO.1.dmnd
-            Path to checkm2 diamond database file
-      --gunc_db
-            default: /data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd
-            Path to GUNC diamond database file
-      --mdmcleaner_db
-            default: /data/pam/software/mdmcleaner/v1
-            Path to MDMCleaner database directory
-      --gtdbtk_db
-            default: /data/pam/software/GTDBTk/release226
-            Absolute path to gtdbtk database directory
------------------------------------------------------------------
- Other options
-      --fasta_ext
-            default: fa
-            Rename fasta output files using the given extension
-      --report_config
-            default: ./assorted-sub-workflows/qc_mags/assets/report_config.json
-            Configuration file (JSON) to customise summary report
-      --autoqc_config
-            default: null
-            Optionally filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string "default" use the provided config at ./assorted-sub-workflows/qc_mags/assets/autoqc_config.json
-      --min_contig
-            default: 1000
-            Contigs below this length will be filtered out by seqkit
-      --skip_raw_reports
-            default: false
-            Skip publishing raw reports from various QC tools, keeping only final summary reports
-      --temp_file_storage
-            default: `/tmp`
-            Specify a directory where GTDB-Tk can store temporary files during processing. Options are '/tmp', '/dev/shm' or 'null' (write to memory)
-      --temp_space
-            default: `30GB`
-            Request a specific amount of temporary working space to reserve for GTDB-Tk jobs when submitted on a HPC (only relevant in combination with `temp_file_storage` having a value other than `null`)
------------------------------------------------------------------
- Logging options
-      --monochrome_logs
-            default: false
-            Should logs appear in plain ASCII
-
------------------------------------------------------------------
-```
-
-Derived from the [QC MAGs subworkflow documentation](./assorted-sub-workflows/qc_mags/README.md).
-
-### Inputs
-
-- (Metagenomic) assemblies in fasta format, grouped in folders per sample
-
-### Outputs
-
-- (Metagenomic) assemblies, each corresponding to a taxonomic unit, that have been decontaminated using MDMCleaner and filtered for contig length according to `min_contig`. If using `autoqc` these are sorted into `pass` and `fail` directories.
-- Reports generated by CheckM2, GTDB-Tk, GUNC and QUAST (unless using `--skip_raw_reports`).
-- Final report TSV per-sample (with customisable columns) combining individual reports from various pipeline tools.
-- Summary TSV of contigs filtered out per sample per bin. Please note that the small contigs (below `min_contig`) are calculated first, the contigs MDMCleaner-failed contigs are only those removed despite their length being above `min_contig`.
-
-### GTDB-Tk runtime
-
-Runtime and memory are reduced for GTDB-Tk classficiation when setting the `--temp_file_storage` option to a value other than `null`, which enables GTDBTk to write intermediate files to a specified location on disk rather than using RAM. This can reduce peak RAM usage by up to 89% and can improve runtime by up to 10%, often allowing the job to run with a smaller memory request, meaning it can start faster on cluster schedulers. On the Sanger cluster this is best done utilising `/tmp` and is therefore the default; `/dev/shm` is another option but is not reservable with LSF and a less stable option. Adapt this option as necessary when running outside of the Sanger cluster.
-
-If you want to configure reserved temporary storage to request with LSF (i.e. when using `--temp_file_storage /tmp`) you can do this by requesting an amount (in GB) with the option `--temp_space`. Typically you should request < 100 GB, and no more then 1000 GB, as larger requests may cause jobs to remain pending. Note that due to a known bug reported in the farm documentation, please request half the memory you require as LSF double-accounts /tmp use see [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/FARM/pages/101361225/Useful+LSF+resources#UsefulLSFresources-Resources).
-
-### Dependencies
-
-All software dependencies are containerised. Databases must be made available for CheckM2, GUNC, MDMCleaner and GTDBTk, paths supplied by params if not using the defaults.
-
-### Troubleshooting
-
-If a process in the pipeline fails with a non-zero exit code that is not recognised as a signal that memory or runtime limits were reached, the process will not be re-run and will be ignored. To understand why it has been ignored, please check the process-specific log file `.command.log` in the work directory of the affected process.
-
-On the Sanger farm (HPC), a post-run script is available to automatically show the end of these log files (where informative messages can often be found) and return affected sample identifiers. See [here](https://ssg-confluence.internal.sanger.ac.uk/spaces/PaMI/pages/181078206/General+pipeline+info#Generalpipelineinfo-Usingthepipelinetracefile) for more details.
-
-### Batching large runs
+#### Batching large runs
 
 Many of the tools within the pipeline benefit from processing multiple MAGs simultaneously. To enable cross-sample batching, specify a `batch_size` using the flag:
 
@@ -278,3 +290,44 @@ This flag aggregates MAGs across samples into batches of N, with any remainder a
 ```
 
 Batch size involves a trade-off between throughput and resource usage. Larger batches improve computational efficiency but increase run-time per job, while smaller batches can reduce latency — particularly on an uncontested cluster — but at the cost of significantly higher memory overhead. Note that batches below ~1000 MAGs may incur disproportionate database loading overhead relative to actual QC compute time. A batch size of 1000–2000 MAGs is recommended for most use cases to strike a balance.
+
+#### GTDBTk temporary storage
+
+GTDBTk requires significant memory which can be reduced by using temporary disk space. By default `/tmp` is used, which is the best configuration for the Sanger HPC. On other machines you may wish to set `--temp_file_storage /dev/shm` for faster I/O, check with your administrators if unsure. Ensure enough space is available or set `--temp_space` appropriately.
+
+### Dependencies
+
+All software dependencies are containerised. The following databases must be available locally (Sanger HPC defaults are pre-configured):
+
+- CheckM2 Diamond database (`--checkm2_db`)
+- GUNC Diamond database (`--gunc_db`)
+- MDMCleaner database (`--mdmcleaner_db`)
+- GTDBTk database (`--gtdbtk_db`)
+
+## Software versions
+
+| Software   | Version | Image                                                     |
+| ---------- | ------- | --------------------------------------------------------- |
+| GTDBTk     | 2.7.2   | `quay.io/biocontainers/gtdbtk:2.7.2--pyhdfd78af_0`        |
+| QUAST      | 5.3.0   | `quay.io/biocontainers/quast:5.3.0--py39pl5321heaaa4ec_0` |
+| CheckM2    | 1.0.2   | `quay.io/biocontainers/checkm2:1.0.2--pyh7cba7a3_0`       |
+| GUNC       | 1.0.6   | `quay.io/biocontainers/gunc:1.0.6--pyhdfd78af_0`          |
+| MDMCleaner | 0.8.7   | `quay.io/biocontainers/mdmcleaner:0.8.7--pyh7cba7a3_0`    |
+| seqkit     | 2.10.0  | `quay.io/biocontainers/seqkit:2.10.0--h9ee0642_0`         |
+
+See `assorted-sub-workflows/qc_mags/modules/` for pinned container versions.
+
+## Troubleshooting
+
+- **GTDBTk fails with out-of-disk-space**: ensure the `--temp_file_storage` directory has sufficient space, allocated space is reserved through LSF with `--temp_space`.
+- **Database not found**: confirm that all database paths exist and are accessible. On the Sanger HPC, default paths are pre-configured.
+- **Resuming a failed run**: add `-resume` to your command to restart from cached intermediate results.
+- For further help, check `.nextflow.log` and the per-process `.command.log` logs in the `work/` directory.
+
+Sanger users may find [this page](https://ssg-confluence.internal.sanger.ac.uk/spaces/PaMI/pages/181078206/General+pipeline+info#Generalpipelineinfo-Troubleshootingafailedpipelinerunandsendingabugreport) useful for troubleshooting Nextflow pipeline runs.
+
+## Issues and Contributions
+
+**GitHub users:** if you find an issue with this pipeline, or would like to suggest an improvement, please log an issue or open a pull request on this repository.
+
+**Sanger users:** if you need internal support, you can raise an issue on the PAM Freshservice portal: https://sanger.freshservice.com/support/catalog/items/426
