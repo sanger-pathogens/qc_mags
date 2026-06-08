@@ -16,7 +16,7 @@ The pipeline performs the following steps:
 
 1. **Taxonomic classification** — GTDBTk `classify_wf` classifies each MAG taxonomically (the `ani_screen` step is skipped).
 2. **Pre-decontamination QC** — QUAST evaluates assembly statistics; CheckM2 predicts completeness and contamination; GUNC checks for chimerism.
-3. **Decontamination** — MDMCleaner removes contaminant contigs from each MAG; seqkit removes contigs below the minimum length threshold.
+3. **Decontamination** — MDMCleaner removes contaminant contigs from each MAG; seqkit subsequently removes contigs below the minimum length threshold.
 4. **Post-decontamination QC** — QUAST, CheckM2, and GUNC are re-run on the filtered MAG FASTAs.
 5. **Reporting** — a summary CSV is produced combining pre- and post-decontamination QC metrics and GTDBTk classification results.
 
