@@ -128,6 +128,16 @@ results/
 
 ### Parameters
 
+**Input/ Output options**
+
+| Option        | Type      | Default     | Description                                                                                                             |
+| ------------- | --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `--manifest`  | `path`    | null        | Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line. |
+| `--recursive` | `boolean` | `false`     | Search input directories recursively for FASTA files.                                                                   |
+| `--outdir`    | `path`    | `./results` | Directory where results are written.                                                                                    |
+
+---
+
 **Database options**
 
 | Option            | Type   | Default                                             | Description                                |
@@ -143,7 +153,6 @@ results/
 
 | Option                | Type      | Default   | Description                                                                                                 |
 | --------------------- | --------- | --------- | ----------------------------------------------------------------------------------------------------------- |
-| `--fasta_ext`         | `string`  | `fa`      | File extension for output FASTA files.                                                                      |
 | `--min_contig`        | `integer` | `0`       | Minimum contig length (bp). Contigs below this threshold are removed after decontamination.                 |
 | `--report_config`     | `path`    | (bundled) | JSON configuration file for the summary report.                                                             |
 | `--autoqc_config`     | `path`    | `null`    | Optional JSON config specifying QC thresholds to flag passing MAGs. Use `"default"` for the bundled config. |
