@@ -1,6 +1,6 @@
 process GTDBTK {
     tag "${meta.ID}"
-    label params.batch_size > 100 ? "cpu_64" : (params.fast_taxonomy ? "cpu_2" : "cpu_8")
+    label params.fast_taxonomy ? (params.batch_size > 100 ? "cpu_4" : "cpu_2") : (params.batch_size > 100 ? "cpu_64" : "cpu_8")
     label "time_12"
     label params.fast_taxonomy ? (params.batch_size > 100 ? "mem_50" : "mem_32") : (params.temp_file_storage ? "mem_64" : "mem_120")
 
