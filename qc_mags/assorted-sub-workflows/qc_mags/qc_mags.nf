@@ -1,0 +1,130 @@
+include { CHECKM2 as PRE_CHECKM2;
+          CHECKM2                          } from './modules/checkm2.nf'
+include { GTDBTK                           } from './modules/gtdbtk.nf'
+include { GUNC as PRE_GUNC;
+          GUNC                             } from './modules/gunc.nf'
+include { getQuastThresholds;
+          QUAST as PRE_QUAST;
+          QUAST                            } from './modules/quast.nf'
+include { MDMCLEANER                       } from './modules/mdmcleaner.nf'
+include { SEQKIT                           } from './modules/seqkit.nf'
+include { REPORT;                           
+          SUMMARISE_CONTIG_FILTERING       } from './modules/reporting.nf'
+include { FILTER_METADATA as FILTER_REPORT } from '../mixed_input/modules/filter_metadata.nf'
+include { FILTER_FASTAS;
+          PUBLISH_RESULTS                  } from './modules/filtering.nf'
+
+// Helper functions
+
+def ensureList(Object maybeListLike) {
+    if (maybeListLike instanceof Collection) {
+        return maybeListLike as List
+    } else {
+        return [maybeListLike]
+    }
+}
+
+// Workflows
+
+workflow QC_MAGS {
+    take:
+    fasta_lists  // [meta, [1.fasta, 2.fasta, ...]]
+
+    main:
+
+    if (params.batch_size > 0) {
+        log.info "Batch size parameter is set to ${params.batch_size}, will process in batches of this size."
+
+        def batchIndex = 0
+
+        fasta_lists
+        | map { meta, fasta_list ->
+            fasta_list
+        }
+        | flatten()
+        | buffer( size: params.batch_size, remainder: true )
+        | map { batch -> 
+            def meta = [:]
+            meta.ID = "batch_${++batchIndex}"
+            [ meta, batch ]
+        }
+        | set { fastas }
+    } else {
+        fasta_lists
+        | set { fastas }
+    }
+
+    pre_qc = Channel.value("pre_qc")
+    
+    PRE_CHECKM2(fastas, pre_qc)
+    PRE_GUNC(fastas, pre_qc)
+    PRE_QUAST(fastas, pre_qc, getQuastThresholds())
+    GTDBTK(fastas, pre_qc)
+    
+    fastas
+    | map { meta, fastas ->
+        def size = ensureList(fastas).size()
+        def group_key = groupKey(meta, size)
+        [group_key, meta, fastas]
+    }
+    | transpose
+    | MDMCLEANER
+    | SEQKIT
+    | groupTuple(remainder: true)
+    | map { group_key, meta, fasta_list ->
+        [ meta.first(), fasta_list ]
+    }
+    | set { postqc_fastas }
+
+    post_qc = Channel.value("post_qc")
+
+    QUAST(postqc_fastas, post_qc, getQuastThresholds())
+    CHECKM2(postqc_fastas, post_qc)
+    GUNC(postqc_fastas, post_qc)
+
+    PRE_QUAST.out.results
+        | join(PRE_CHECKM2.out.results)
+        | join(PRE_GUNC.out.results)
+        | join(QUAST.out.results)
+        | join(CHECKM2.out.results)
+        | join(GUNC.out.results)
+        | join(GTDBTK.out.results)
+        | combine(Channel.fromPath(params.report_config))
+        | REPORT
+        
+    PRE_QUAST.out.results
+        | join(QUAST.out.results)
+        | SUMMARISE_CONTIG_FILTERING
+
+    if (params.autoqc_config) {
+        // Check if user-supplied config or opted for default config
+        Path autoqc_config = params.autoqc_config == "default"
+            ? file("${projectDir}/assorted-sub-workflows/qc_mags/assets/autoqc_config.tsv", checkIfExists: true)
+            : file(params.autoqc_config, checkIfExists: true)
+
+        String fasta_ext = params.fasta_ext.replaceAll(/^\./, '')
+
+        FILTER_REPORT(
+            REPORT.out.report,
+            autoqc_config,
+            "", // select all columns
+            false,  // don't remove header
+            "" // don't drop duplicates
+        )
+
+        FILTER_REPORT.out.filtered_metadata
+        | splitCsv(header: true, sep: '\t')
+        | map { meta, row -> [meta, "${row.postqc_genome_name}.${fasta_ext}"] }
+        | groupTuple
+        | set { filtered_fasta_filenames }
+
+        filtered_fasta_filenames
+        | join(postqc_fastas)
+        | FILTER_FASTAS
+
+        PUBLISH_RESULTS(
+            FILTER_REPORT.out.filtered_metadata,
+            "${params.outdir}/pass/report"
+        )
+    }
+}

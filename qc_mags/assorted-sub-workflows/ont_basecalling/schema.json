@@ -1,0 +1,53 @@
+{
+    "pipeline": "Nanopore Basecalling",
+    "params": {
+        "Basecalling": {
+            "basecall_model": {
+                "default": "",
+                "help_text": "Specifies the model for basecalling, which matches specific flow cell and chemistry. Models can be found here https://github.com/nanoporetech/dorado?tab=readme-ov-file"
+            },
+            "trim_adapters": {
+                "default": "all",
+                "help_text": "This is the the same as the default behavior. Any detected barcodes, adapters or primers will be trimmed."
+            },
+            "barcode_kit_name": {
+                "default": "",
+                "help_text": "Specifies the barcode kit used for multiplexing samples; if providing a list, please change in the config file."
+            },
+            "barcode_arrangement": {
+                "default": "",
+                "help_text": "Custom barcode arrangement file as specifed here: https://github.com/nanoporetech/dorado/blob/release-v0.9/documentation/CustomBarcodes.md"
+            },
+            "barcode_sequences": {
+                "default": "",
+                "help_text": "Custom barcode fasta file as specifed here: https://github.com/nanoporetech/dorado/blob/release-v0.9/documentation/CustomBarcodes.md"
+            },
+            "read_format": {
+                "default": "fastq",
+                "help_text": "Sets the output format for basecalled reads to FASTQ."
+            }
+        },
+        "Output File Management": {
+            "save_fastqs": {
+                "default": "true",
+                "help_text": "Save basecalled reads in FASTQ format if --read_format set to fastq."
+            }
+        },
+        "Reference Files": {
+            "raw_read_dir": {
+                "default": "",
+                "help_text": "Path to raw pod5 or fast5 directory."
+            },
+            "additional_metadata": {
+                "default": "",
+                "help_text": "Path to the metadata file linking samples to barcodes. CSV of ID,Barcode to link barcode to sample name)"
+            }
+        },
+        "LSF Options": {
+            "monochrome_logs": {
+                "default": "false",
+                "help_text": "Logs will not be in monochrome."
+            }
+        }
+    }
+}

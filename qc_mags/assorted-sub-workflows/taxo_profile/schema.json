@@ -1,0 +1,58 @@
+{
+    "params": {
+        "taxo profile Subworkflow Options": {
+            "sylph_profile": {
+                "default": "true",
+                "help_text": "Run sylph taxonomic classification."
+            },
+            "sylph_db":{
+                "default": "/data/pam/software/sylph/gtdb-r226-c200-dbv1/gtdb-r226-c200-dbv1.syldb",
+                "help_text": "Path to sylph database."
+            },
+            "save_sylph_sketches":{
+                "default": "false",
+                "help_text": "Keep sylph sketches."
+            },
+            "sylph_k": {
+                "default": "31",
+                "help_text": "Value of k. Only k = 21, 31 are currently supported."
+            },
+            "sylph_tax_metadata": {
+                "default": "/data/pam/software/sylph-tax/v1/gtdb_r226_metadata.tsv",
+                "help_text": "Path to the sylph-tax metadata TSV to use for taxprof."
+            },
+            "genome_path_prefix": {
+                "default": "",
+                "help_text": "Path to prefix sylph references in sylph database paths to make them resolvable."
+            },
+            "sylph_estimate_unknown": {
+                "default": "true",
+                "help_text": "Estimate proportion of classified sequences where the sum of Sequence_abundance column is the percentage of classified reads."
+            },
+            "sylph_read_seq_id" : {
+                "default": "99.5",
+                "help_text": "Estimated percentage identity of your sequences (i.e. 100 - error percent). 99.5 is recommended for Illumina reads. Set this parameter to false to enable sylph to provide its own estimate for percentage identity. See Sylph documentation for additional information."
+            },
+            "bracken_profile":{
+                "default": "false",
+                "help_text": "Run Kraken2Bracken taxonomic classification."
+            }
+        }
+    },
+    "overwrite_params": {
+
+            "kraken2_db": {
+                "default": "/data/pam/software/kraken2/standard/k2_standard_20250402",
+                "help_text": "Pathway to Kraken2 database."
+            },
+            "bracken_classification_level": {
+                "default": "S",
+                "help_text": "Taxonomic rank to analyze for Bracken (Options: 'D', 'P', 'C', 'O', 'F', 'G', 'S'). Cannot check the accuracy of classification at species level if bracken classification level is not set to 'S' (species)"
+            },
+            "read_len": {
+                "default": "150",
+                "help_text": "Expected length of reads in the sample"
+            }  
+    }
+}
+

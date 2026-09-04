@@ -1,0 +1,23 @@
+{ 
+    "pipeline": "Annotate_bakta (sub-workflow)",
+    "params": {
+        "Annotation": {
+            "bakta_args": {
+                "default": "",
+                "help_text": "Supply bakta arguments as a string, e.g. '--proteins <full path>'. Avoid the use of --prefix, --locus-tag, --keep-contig-headers, for which values are supplied by the pipeline."},
+            "bakta_db": {
+                "default": "/data/pam/software/bakta/v6.0/",
+                "help_text": "Absolute path to the Bakta DB used for annotation."
+            },
+            "publish_gbff": {
+                "default": "false",
+                "help_text": "Save gbff (GBK) files into a /gbff directory"
+            },
+            "combine_annotations": {
+                "default": "false",
+                "help_text": "EXPERIMENTAL: Combine annotations that you have produced seperately into the main bakta produced annotation"
+            }
+        }
+    }
+}
+

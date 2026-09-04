@@ -1,0 +1,24 @@
+{
+  "pipeline": "qc_mags",
+  "params": {
+    "Input options": {
+      "manifest": {
+        "default": "null",
+        "help_text": "Input manifest CSV of sample IDs and paths to directories containing assemblies (FASTA format) - must have header line"
+      },
+      "recursive": {
+        "default": "false",
+        "help_text": "Whether to search for FASTA files recursively within the provided manifest directories"
+      }
+    },
+    "Logging options": {
+      "monochrome_logs": {
+        "default": "false",
+        "help_text": "Should logs appear in plain ASCII"
+      }
+    }
+  },
+  "overwrite_param": {
+    "none": {}
+  }
+}

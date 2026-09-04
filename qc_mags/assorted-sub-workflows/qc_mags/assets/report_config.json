@@ -1,0 +1,18 @@
+{
+  "GUNC": {
+    "id_column": "genome",
+    "keep_columns": ["pass.GUNC", "n_contigs"]
+  },
+  "CHECKM2": {
+    "id_column": "Name",
+    "keep_columns": ["Completeness", "Contamination", "Genome_Size"]
+  },
+  "GTDBTK": {
+    "id_column": "user_genome",
+    "keep_columns": ["classification", "closest_genome_reference"]
+  },
+  "QUAST": {
+    "id_column": "Assembly",
+    "keep_columns": ["# contigs", "Largest contig", "Total length", "GC (%)", "N50", "N90", "auN", "L50", "L90", "# N's per 100 kbp"]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "pipeline": "qc_mags",
+  "params": {
+    "Database options": {
+      "header_1": {
+        "subtext": "These parameters set paths to various databases used by the qc_mags workflow"
+      },
+      "checkm2_db": {
+        "default": "/data/pam/software/checkm2_db/uniref100.KO.1.dmnd",
+        "help_text": "Path to checkm2 diamond database file"
+      },
+      "gunc_db": {
+        "default": "/data/pam/software/gunc/GTDB/gunc_db_gtdb95.dmnd",
+        "help_text": "Path to GUNC diamond database file"
+      },
+      "mdmcleaner_db": {
+        "default": "/data/pam/software/mdmcleaner/v1",
+        "help_text": "Path to MDMCleaner database directory"
+      },
+      "gtdbtk_db": {
+        "default": "/data/pam/software/GTDBTk/release226",
+        "help_text": "Path to gtdbtk database directory"
+      }
+    },
+    "Other options": {
+      "fasta_ext": {
+        "default": "fa",
+        "help_text": "Set the expected extension of fasta files in the input directories."
+      },
+      "report_config": {
+        "default": "./assorted-sub-workflows/qc_mags/assets/report_config.json",
+        "help_text": "Configuration file (JSON) to customise summary report"
+      },
+      "autoqc_config": {
+        "default": "null",
+        "help_text": "Optional parameter to filter MAGs that pass QC thresholds specified in the config. When applying this option you must either provide the path to a config or with the string 'default' use the provided config."
+      },
+      "min_contig": {
+        "default": 0,
+        "help_text": "Contigs below this length will be filtered out by seqkit."
+      },
+      "skip_raw_reports": {
+        "default": "false",
+        "help_text": "Skip publishing raw reports from various QC tools, keeping only final summary reports."
+      },
+      "temp_file_storage": {
+        "default": "/tmp",
+        "help_text": "Specify a directory where GTDBTk can store temporary files during processing (see README for more information). Options are '/tmp', '/dev/shm' or 'null' (write to memory)."
+      },
+      "temp_space": {
+        "default": "30GB",
+        "help_text": "Request a specific amount of temporary working space to reserve for GTDB-Tk jobs when submitted on a HPC (only relevant in combination with --temp_file_storage having a value other than null)"
+      },
+      "batch_size": {
+        "default": "0 (batch per id)",
+        "help_text": "Number of MAGs to process in a batch when running suitable tools. See README for more information."
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+    "pipeline": "ENA Downloader",
+    "params": {
+      "ENA Downloader options": {
+        "publish_metadata": {
+          "default": true,
+          "help_text": "Flag to publish metadata TSV downloaded from ENA."
+        },
+        "accession_type": {
+          "default": "run",
+          "help_text": "Set type of ENA accessions passed to the ENA downloader tool. Possible values: run, sample, study"
+        }
+      }
+    }
+}

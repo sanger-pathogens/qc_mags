@@ -1,0 +1,26 @@
+process CHECKM2 {
+    tag "${meta.ID}"
+    label params.batch_size > 100 ? "cpu_32" : "cpu_4"
+    label params.batch_size > 100 ? "mem_16" : "mem_8"
+    label "time_queue_from_short"
+
+    container  'quay.io/biocontainers/checkm2:1.0.2--pyh7cba7a3_0'
+
+    publishDir mode: 'copy', path: "${params.outdir}/${qc_stage}/checkm2/", enabled: !(params.skip_raw_reports)
+
+    input:
+    tuple val(meta), path(fastas, stageAs: "fastas/*")
+    val(qc_stage)
+
+    output:
+    tuple val(meta), path(report_tsv), emit: results
+
+    script:
+    report_tsv = "${meta.ID}_quality_report.tsv"
+    """
+    checkm2 predict -x ".${params.fasta_ext}" --threads ${task.cpus} --input fastas --output-directory checkm2 --database_path ${params.checkm2_db}
+
+    # move the output file names to something slightly more descriptive including method
+    mv checkm2/quality_report.tsv ${report_tsv}
+    """
+}
