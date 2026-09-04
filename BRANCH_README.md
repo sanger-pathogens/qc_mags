@@ -71,3 +71,32 @@ is additive.
 Pinned to upstream v1.0.1. `master` holds the pristine baseline, so
 `git diff master fast_gtdbtk` is the full patch and rebasing onto a newer
 upstream release is straightforward.
+
+## Rejected: `--pplacer_cpus`
+
+A separate branch (`pplacer_cpus_test`) added a `--pplacer_cpus` parameter on the
+theory that pplacer was the bottleneck and could be given more threads. It was
+tested on six samples in matched pairs and **rejected as a no-op**. It is not
+part of this branch and should not be reintroduced.
+
+Measured, LSF-authoritative (`.command.log`, not Nextflow's trace):
+
+| sample | tree-placed | `--pplacer_cpus 1` | `--pplacer_cpus N` |
+|--------|-------------|--------------------|--------------------|
+| #103   | 0           | 0.6 min / 1.23 cores | 0.6 min / 1.28 cores |
+| #102   | 0           | 1.2 min / 1.31       | 0.8 min / 1.28       |
+| #100   | 0           | 0.8 min / 1.21       | 0.9 min / 1.24       |
+| #17    | 1           | 24.3 min / **1.00**  | 34.8 min / **1.02**  |
+| #49    | 1           | 32.7 min / **1.01**  | 26.1 min / **1.01**  |
+
+pplacer sits at exactly 1.00-1.02 cores for 24-33 minutes regardless of the
+setting: it is strictly single-threaded and the flag cannot change that. The
+per-sample results also cross over (#17 faster with 1 CPU, #49 faster with N),
+and #17 varied 24.3 vs 34.8 min on identical input - so host variance (~40%)
+exceeds any effect the flag could have.
+
+**Caution for future benchmarking on this container:** Nextflow's `peak_rss` and
+`%cpu` are both unreliable here. It sums across the process tree, and GTDB-Tk
+forks ~20 processes that mmap the same reference package, so a task LSF measured
+at 14.8 GB / 1.0 cores was reported as 190 GB / 988%. A `%mem` above 100 is the
+giveaway. Use `.command.log` for all label decisions.
