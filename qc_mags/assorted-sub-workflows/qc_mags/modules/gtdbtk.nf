@@ -2,7 +2,7 @@ process GTDBTK {
     tag "${meta.ID}"
     label params.batch_size > 100 ? "cpu_64" : (params.fast_taxonomy ? "cpu_2" : "cpu_8")
     label "time_12"
-    label params.batch_size > 100 ? "mem_50" : (params.fast_taxonomy ? "mem_32" : (params.temp_file_storage ? "mem_64" : "mem_120"))
+    label params.fast_taxonomy ? (params.batch_size > 100 ? "mem_50" : "mem_32") : (params.temp_file_storage ? "mem_64" : "mem_120")
 
 
     container  'quay.io/biocontainers/gtdbtk:2.7.2--pyhdfd78af_0'
