@@ -74,10 +74,10 @@ upstream release is straightforward.
 
 ## Rejected: `--pplacer_cpus`
 
-A separate branch (`pplacer_cpus_test`) added a `--pplacer_cpus` parameter on the
-theory that pplacer was the bottleneck and could be given more threads. It was
-tested on six samples in matched pairs and **rejected as a no-op**. It is not
-part of this branch and should not be reintroduced.
+A `--pplacer_cpus` parameter was tried, on the theory that pplacer was the
+bottleneck and could be given more threads. It was tested on six samples in
+matched pairs and **rejected as a no-op**; the test branch was deleted. It should
+not be reintroduced.
 
 Measured, LSF-authoritative (`.command.log`, not Nextflow's trace):
 

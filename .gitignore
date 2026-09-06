@@ -1,2 +1,4 @@
-PROPOSED_config_block.txt
-*.bak
+work/
+results/
+.nextflow/
+.nextflow.log*

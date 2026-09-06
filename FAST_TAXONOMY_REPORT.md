@@ -236,5 +236,5 @@ cd qc_mags_fork
 git diff master fast_gtdbtk          # the complete change
 ```
 
-Patch series is also in `patches/0001`–`0005`. Pinned to upstream v1.0.1, so
-rebasing onto a newer release is straightforward.
+Pinned to upstream v1.0.1, so rebasing onto a newer release is straightforward.
+`git format-patch master..fast_gtdbtk` if you want it as a patch series.
