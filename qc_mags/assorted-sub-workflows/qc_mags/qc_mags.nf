@@ -59,7 +59,6 @@ workflow QC_MAGS {
     PRE_CHECKM2(fastas, pre_qc)
     PRE_GUNC(fastas, pre_qc)
     PRE_QUAST(fastas, pre_qc, getQuastThresholds())
-    GTDBTK(fastas, pre_qc)
     
     fastas
     | map { meta, fastas ->
@@ -81,6 +80,14 @@ workflow QC_MAGS {
     QUAST(postqc_fastas, post_qc, getQuastThresholds())
     CHECKM2(postqc_fastas, post_qc)
     GUNC(postqc_fastas, post_qc)
+
+    // GTDB-Tk runs on the POST-QC genomes, i.e. after MDMCLEANER has stripped
+    // contaminant contigs and SEQKIT has dropped short ones. It used to run in
+    // the pre-QC block on the unfiltered bins, which meant the published species
+    // call was derived partly from contigs the pipeline then removed - the
+    // taxonomy did not describe the genome the pipeline actually emits.
+    // Output moves from <outdir>/pre_qc/gtdbtk/ to <outdir>/post_qc/gtdbtk/.
+    GTDBTK(postqc_fastas, post_qc)
 
     PRE_QUAST.out.results
         | join(PRE_CHECKM2.out.results)
