@@ -3,3 +3,5 @@ results/
 .nextflow/
 .nextflow.log*
 *.bak
+__pycache__/
+*.orig
