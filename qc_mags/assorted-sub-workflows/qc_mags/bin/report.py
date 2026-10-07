@@ -136,6 +136,44 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df[new_order]
 
 
+TAXONOMY_COLUMN = "gtdbtk_classification"
+
+
+def check_taxonomy(df: pd.DataFrame) -> None:
+    """Warn about genomes without a GTDB-Tk call; fail if NO genome has one.
+
+    A few genomes without taxonomy are expected (e.g. a genome whose post-QC
+    steps were dropped). Every genome in the batch lacking it means the
+    GTDB-Tk output was not joined at all - an empty/missing summary or a join
+    key mismatch (as happened when the cleaned_..._filtered_kept_contigs
+    wrapper was not stripped, leaving 72/83 batches of a 468-sample run with no
+    taxonomy). That must fail the task rather than publish a taxonomy-less
+    report that looks complete.
+    """
+    if df.empty:
+        logging.warning("Merged report has no genomes; skipping taxonomy check")
+        return
+    if TAXONOMY_COLUMN in df.columns:
+        values = df[TAXONOMY_COLUMN]
+        missing = values.isna() | (values.astype(str).str.strip() == "")
+    else:
+        missing = pd.Series(True, index=df.index)
+    n_missing = int(missing.sum())
+    if n_missing:
+        logging.warning(
+            f"{n_missing}/{len(df)} genomes lack {TAXONOMY_COLUMN}: "
+            + ", ".join(df.loc[missing, JOIN_COLUMN].astype(str).head(20))
+            + (" ..." if n_missing > 20 else "")
+        )
+    if n_missing == len(df):
+        logging.error(
+            f"ALL {len(df)} genomes lack {TAXONOMY_COLUMN}: the GTDB-Tk summary is "
+            "empty or did not join on genome name. Refusing to write a report "
+            "without taxonomy."
+        )
+        sys.exit(2)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Merge GUNC, CheckM2 and post-QC metadata."
@@ -211,6 +249,8 @@ def main():
 
     merged = merge_all(*dfs)
     merged = reorder_columns(merged)
+
+    check_taxonomy(merged)
 
     merged.to_csv(args.output, sep="\t", index=False)
     logging.info(f"Merged QC report written to: {args.output}")
