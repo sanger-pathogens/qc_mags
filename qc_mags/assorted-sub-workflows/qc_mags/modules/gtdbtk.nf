@@ -1,19 +1,7 @@
 process GTDBTK {
     tag "${meta.ID}"
-    label params.fast_taxonomy ? (params.batch_size > 100 ? "cpu_4" : "cpu_2") : (params.batch_size > 100 ? "cpu_64" : "cpu_8")
-    label "time_12"
-    // Two fixes to the fast-taxonomy memory labels:
-    //  * "mem_50" DOES NOT EXIST in nextflow-commons - only "mem_50M" (50 MB)
-    //    does. An unmatched label matches no withLabel selector and silently
-    //    falls back to the default memory request, so any large fast run
-    //    (batch_size > 100) was being under-provisioned. Replaced with mem_64.
-    //  * The small-run branch mem_32 was too small: measured 40,675 MB peak on
-    //    a 468-sample run, 96/110 tasks killed by TERM_MEMLIMIT. Raised to mem_64.
-    // (Nextflow's trace peak_rss reports 126-166 GB for these tasks; that is
-    //  pplacer's shared pages summed across its process tree. LSF's own
-    //  Max Memory, ~40 GB, is the real figure.)
-    label params.fast_taxonomy ? (params.batch_size > 100 ? "mem_64" : "mem_64") : (params.temp_file_storage ? "mem_64" : "mem_120")
-
+    // cpus/memory are set in qc_mags.config (withName) - see the note there.
+    label "time_12"   // non-fast mode; fast mode time is overridden in qc_mags.config
 
     container  'quay.io/biocontainers/gtdbtk:2.7.2--pyhdfd78af_0'
 

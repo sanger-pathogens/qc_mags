@@ -1,12 +1,6 @@
 process CHECKM2 {
     tag "${meta.ID}"
-    label params.batch_size > 100 ? "cpu_32" : "cpu_4"
-    // Small-run branch raised mem_8 -> mem_16. Measured on a 468-sample run:
-    // PRE_CHECKM2 peaked at 8,256 MB and 422/468 tasks died with TERM_MEMLIMIT
-    // at 8 GB. The overshoot is small but the failure is total, and because
-    // REPORT joins on this output a failed task removes the whole sample from
-    // the final report.
-    label params.batch_size > 100 ? "mem_16" : "mem_16"
+    // cpus/memory are set in qc_mags.config (withName) - see the note there.
     label "time_queue_from_short"
 
     container  'quay.io/biocontainers/checkm2:1.0.2--pyh7cba7a3_0'
