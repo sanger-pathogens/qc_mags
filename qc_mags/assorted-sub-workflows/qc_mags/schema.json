@@ -54,6 +54,10 @@
       "batch_size": {
         "default": "0 (batch per id)",
         "help_text": "Number of MAGs to process in a batch when running suitable tools. See README for more information."
+      },
+      "genome_type": {
+        "default": "auto",
+        "help_text": "Value of the genome_status report column: 'mag' or 'isolate' for every genome, or 'auto' to guess from the name ('mag' if it contains 'MAG', else 'isolate')."
       }
     }
   }

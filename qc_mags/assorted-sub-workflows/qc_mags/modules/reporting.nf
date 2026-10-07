@@ -38,7 +38,35 @@ process REPORT {
         --post_qc_checkm2 post_checkm2_report.tsv \\
         --post_qc_gunc post_gunc_report.tsv \\
         --config ${report_config} \\
+        --genome_type ${params.genome_type} \\
         --output ${final_report}
+    """
+}
+
+process COMBINE_REPORTS {
+    label 'cpu_1'
+    label 'mem_2'
+    label 'time_1'
+
+    publishDir mode: 'copy', path: "${params.outdir}/report/"
+
+    container 'quay.io/sangerpathogens/pandas:2.2.1'
+
+    input:
+    path(reports, stageAs: "batch_reports/*")
+    path(sample_map)
+
+    output:
+    path(combined_report), emit: report
+
+    script:
+    command = "${projectDir}/assorted-sub-workflows/qc_mags/bin/combine_reports.py"
+    combined_report = "all_final_report.tsv"
+    """
+    ${command} \\
+        --reports batch_reports/* \\
+        --sample_map ${sample_map} \\
+        --output ${combined_report}
     """
 }
 

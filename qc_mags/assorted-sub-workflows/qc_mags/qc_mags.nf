@@ -8,7 +8,8 @@ include { getQuastThresholds;
           QUAST                            } from './modules/quast.nf'
 include { MDMCLEANER                       } from './modules/mdmcleaner.nf'
 include { SEQKIT                           } from './modules/seqkit.nf'
-include { REPORT;                           
+include { REPORT;
+          COMBINE_REPORTS;
           SUMMARISE_CONTIG_FILTERING       } from './modules/reporting.nf'
 include { FILTER_METADATA as FILTER_REPORT } from '../mixed_input/modules/filter_metadata.nf'
 include { FILTER_FASTAS;
@@ -31,6 +32,20 @@ workflow QC_MAGS {
     fasta_lists  // [meta, [1.fasta, 2.fasta, ...]]
 
     main:
+
+    // genome -> manifest sample ID, recorded BEFORE batching (a batch ID says
+    // nothing about which sample a genome came from). Keyed on the fasta name
+    // without the extension, which is what the reports call preqc_genome_name.
+    String sample_map_ext = ".${params.fasta_ext.replaceAll(/^\./, '')}"
+    fasta_lists
+    | flatMap { meta, fasta_list ->
+        ensureList(fasta_list).collect { f ->
+            def name = f.name.endsWith(sample_map_ext) ? f.name[0..<(f.name.length() - sample_map_ext.length())] : f.baseName
+            "${meta.ID}\t${name}"
+        }
+    }
+    | collectFile(name: 'genome_sample_map.tsv', newLine: true, sort: true)
+    | set { genome_sample_map }
 
     if (params.batch_size > 0) {
         log.info "Batch size parameter is set to ${params.batch_size}, will process in batches of this size."
@@ -98,6 +113,12 @@ workflow QC_MAGS {
         | join(GTDBTK.out.results)
         | combine(Channel.fromPath(params.report_config))
         | REPORT
+
+    // One table for the whole run, with the manifest sample ID per genome.
+    COMBINE_REPORTS(
+        REPORT.out.report.map { meta, report -> report }.collect(),
+        genome_sample_map
+    )
         
     PRE_QUAST.out.results
         | join(QUAST.out.results)

@@ -102,17 +102,57 @@ def process_postqc_genome_name(df: pd.DataFrame) -> pd.DataFrame:
     return new_df
 
 
-def enrich_fields(df: pd.DataFrame) -> pd.DataFrame:
-    df["sample_or_strain_name"] = (
-        df[JOIN_COLUMN].str.rsplit("_", expand=True, n=1).loc[:, 0]
-    )
-    df["genome_status"] = df[JOIN_COLUMN].apply(
-        lambda x: "mag" if "MAG" in x.upper() else "isolate"
-    )
+GENOME_TYPES = ("auto", "mag", "isolate")
+COMPLETENESS_COLUMN = "checkm2_postqc_Completeness"
+CONTAMINATION_COLUMN = "checkm2_postqc_Contamination"
+QUALITY_COLUMN = "mimag_quality"
+
+
+def mimag_quality(completeness, contamination) -> Optional[str]:
+    """MIMAG-style tier from post-QC CheckM2 (completeness/contamination only;
+    the rRNA/tRNA criteria of the full MIMAG HQ standard are not assessed).
+    HQ: >= 90 and < 5; MQ: >= 50 and < 10; otherwise LQ. Empty if CheckM2 is
+    missing for the genome."""
+    if pd.isna(completeness) or pd.isna(contamination):
+        return None
+    if completeness >= 90 and contamination < 5:
+        return "HQ"
+    if completeness >= 50 and contamination < 10:
+        return "MQ"
+    return "LQ"
+
+
+def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
+    if COMPLETENESS_COLUMN in df.columns and CONTAMINATION_COLUMN in df.columns:
+        comp = pd.to_numeric(df[COMPLETENESS_COLUMN], errors="coerce")
+        cont = pd.to_numeric(df[CONTAMINATION_COLUMN], errors="coerce")
+        df[QUALITY_COLUMN] = [mimag_quality(a, b) for a, b in zip(comp, cont)]
+    else:
+        logging.warning(
+            f"{COMPLETENESS_COLUMN}/{CONTAMINATION_COLUMN} not in report; "
+            f"{QUALITY_COLUMN} left empty"
+        )
+        df[QUALITY_COLUMN] = None
     return df
 
 
-def merge_all(*dfs: pd.DataFrame) -> pd.DataFrame:
+def enrich_fields(df: pd.DataFrame, genome_type: str = "auto") -> pd.DataFrame:
+    df["sample_or_strain_name"] = (
+        df[JOIN_COLUMN].str.rsplit("_", expand=True, n=1).loc[:, 0]
+    )
+    if genome_type == "auto":
+        # Legacy heuristic: "MAG" anywhere in the name. Misfires on MAG sets
+        # whose names do not contain it (e.g. mags_maker's <sample>_bin_N).
+        df["genome_status"] = df[JOIN_COLUMN].apply(
+            lambda x: "mag" if "MAG" in x.upper() else "isolate"
+        )
+    else:
+        df["genome_status"] = genome_type
+    df = add_mimag_quality(df)
+    return df
+
+
+def merge_all(*dfs: pd.DataFrame, genome_type: str = "auto") -> pd.DataFrame:
     df, other_dfs = dfs[0], dfs[1:]
     join_keys = [JOIN_COLUMN]
     for other_df in other_dfs:
@@ -120,7 +160,7 @@ def merge_all(*dfs: pd.DataFrame) -> pd.DataFrame:
         cols_to_drop = overlapping_cols - set(join_keys)
         other_df_clean = other_df.drop(columns=cols_to_drop)
         df = df.merge(other_df_clean, on=join_keys, how="left")
-    df = enrich_fields(df)
+    df = enrich_fields(df, genome_type)
     return df
 
 
@@ -130,6 +170,7 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
         f"postqc_{JOIN_COLUMN_STEM}",
         "sample_or_strain_name",
         "genome_status",
+        QUALITY_COLUMN,
     ]
     other_cols = sorted([col for col in df.columns if col not in priority_cols])
     new_order = priority_cols + other_cols
@@ -205,6 +246,13 @@ def parse_args():
     parser.add_argument(
         "--output", type=Path, required=True, help="Output TSV path"
     )
+    parser.add_argument(
+        "--genome_type",
+        choices=GENOME_TYPES,
+        default="auto",
+        help="genome_status for every genome: 'mag' or 'isolate', or 'auto' "
+        "(default) for the name heuristic ('mag' if the name contains 'MAG')",
+    )
     return parser.parse_args()
 
 
@@ -247,7 +295,7 @@ def main():
             df[JOIN_COLUMN] = stripped.fillna(df[JOIN_COLUMN])
         dfs.append(df)
 
-    merged = merge_all(*dfs)
+    merged = merge_all(*dfs, genome_type=args.genome_type)
     merged = reorder_columns(merged)
 
     check_taxonomy(merged)
