@@ -51,7 +51,10 @@ process GTDBTK {
 
     gtdbtk classify_wf --genome_dir fastas -x ${params.fasta_ext} ${place_flag} --cpus ${task.cpus} --out_dir gtdbtk_outdir \$scratch_flag
 
-    cp gtdbtk_outdir/gtdbtk.bac*.summary.tsv ${report_tsv}
+    # Keep archaeal calls too: GTDB-Tk writes them to a separate gtdbtk.ar53.summary.tsv.
+    # Copying only the bac120 file dropped every archaeal genome (e.g. Methanobrevibacter)
+    # from the report - 931 of 145,549 PRJNA999635 MAGs had no taxonomy because of it.
+    awk 'FNR==1 && NR!=1 {next} {print}' gtdbtk_outdir/gtdbtk.bac*.summary.tsv \$(ls gtdbtk_outdir/gtdbtk.ar*.summary.tsv 2>/dev/null) > ${report_tsv}
 
     """
 
