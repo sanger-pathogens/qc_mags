@@ -195,6 +195,18 @@ def main():
 
         if qc_stage == "postqc":
             df = process_postqc_genome_name(df)
+        elif tool == "gtdbtk":
+            # GTDB-Tk runs on the POST-QC (MDMCleaner-cleaned) fastas, so its user_genome is
+            # "cleaned_<name>_filtered_kept_contigs". With qc_stage None its id was being
+            # renamed straight to JOIN_COLUMN without that wrapper stripped, while every other
+            # report's key is the bare <name>. The left-join therefore never matched and
+            # gtdbtk_classification came out EMPTY for every genome, silently, in every run.
+            # Strip the wrapper here so the key matches. Genomes whose name does not carry the
+            # wrapper are left unchanged.
+            stripped = df[JOIN_COLUMN].str.extract(
+                r"^cleaned_(.*)_filtered_kept_contigs$"
+            ).loc[:, 0]
+            df[JOIN_COLUMN] = stripped.fillna(df[JOIN_COLUMN])
         dfs.append(df)
 
     merged = merge_all(*dfs)
