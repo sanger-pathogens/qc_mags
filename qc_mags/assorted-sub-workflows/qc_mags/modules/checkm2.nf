@@ -1,7 +1,7 @@
 process CHECKM2 {
     tag "${meta.ID}"
     // cpus/memory are set in qc_mags.config (withName) - see the note there.
-    label "time_queue_from_short"
+    // time is set in qc_mags.config (withName CHECKM2|PRE_CHECKM2)
 
     container  'quay.io/biocontainers/checkm2:1.0.2--pyh7cba7a3_0'
 
