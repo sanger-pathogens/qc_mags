@@ -100,3 +100,24 @@ exceeds any effect the flag could have.
 forks ~20 processes that mmap the same reference package, so a task LSF measured
 at 14.8 GB / 1.0 cores was reported as 190 GB / 988%. A `%mem` above 100 is the
 giveaway. Use `.command.log` for all label decisions.
+
+## skani 0.4.0 for the GTDB-Tk ANI screen
+
+`params.gtdbtk_skani_bin` (default
+`/lustre/scratch127/pam/teams/team162/shared_scratch/software/skani/0.4.0/skani`) is
+bind-mounted over the GTDB-Tk 2.7.2 container's bundled skani 0.3.1. The container
+is unchanged; `--gtdbtk_skani_bin null` restores the bundled binary.
+
+No new skani database is needed. skani 0.4.0 reads the r232 GTDB-Tk package's
+consolidated database (`skani/database`, 199,923 sketches) as-is. The standalone
+`skani_gtdb_r232-v0.4` download on the skani wiki is a separate database and is
+not used by GTDB-Tk.
+
+Validation (2026-10-13, 40 Prevotella-panel genomes, `classify_wf` fast mode):
+
+- ANI screen: 38/38 genomes classified by both versions with identical reference
+  genome, ANI, AF and species; the "other related references" field holds the same
+  entries in a different order. skani step 77 s (0.4.0) vs 86 s (0.3.1).
+- Final 0.4.0 calls for those 38 equal the 0.3.1 ANI-screen calls (38/38).
+- Real qc_mags run with this config: GTDBTK task logged
+  `Calculating all vs all ANI with skani v0.4.0` and exited 0.
