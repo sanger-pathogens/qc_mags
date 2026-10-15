@@ -6,6 +6,7 @@ include { GUNC as PRE_GUNC;
 include { getQuastThresholds;
           QUAST as PRE_QUAST;
           QUAST                            } from './modules/quast.nf'
+include { INPUT_FASTA_CHECK                } from './modules/input_check.nf'
 include { MDMCLEANER;
           MDMCLEANER_AUDIT                 } from './modules/mdmcleaner.nf'
 include { SEQKIT                           } from './modules/seqkit.nf'
@@ -70,13 +71,26 @@ workflow QC_MAGS {
         | set { fastas }
     }
 
+    // Clean and check every input genome once per batch before any QC step reads it (modules/input_check.nf).
+    INPUT_FASTA_CHECK(fastas)
+    INPUT_FASTA_CHECK.out.fastas | set { checked_fastas }
+    INPUT_FASTA_CHECK.out.fixes
+    | collectFile(name: 'input_fasta_fixes.tsv', storeDir: "${params.outdir}/report", sort: true)
+    | map { f -> f.readLines().findAll { it.trim() }.size() }
+    | subscribe { n ->
+        if (n > 0) {
+            log.warn "[input check] ${n} fix(es)/warning(s) on input genomes (e.g. GenBank '//' lines removed, " +
+                     "non-nucleotide characters); see ${params.outdir}/report/input_fasta_fixes.tsv"
+        }
+    }
+
     pre_qc = Channel.value("pre_qc")
     
-    PRE_CHECKM2(fastas, pre_qc)
-    PRE_GUNC(fastas, pre_qc)
-    PRE_QUAST(fastas, pre_qc, getQuastThresholds())
+    PRE_CHECKM2(checked_fastas, pre_qc)
+    PRE_GUNC(checked_fastas, pre_qc)
+    PRE_QUAST(checked_fastas, pre_qc, getQuastThresholds())
     
-    fastas
+    checked_fastas
     | map { meta, fastas ->
         def size = ensureList(fastas).size()
         def group_key = groupKey(meta, size)
