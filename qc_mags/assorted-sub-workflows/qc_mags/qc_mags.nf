@@ -6,7 +6,8 @@ include { GUNC as PRE_GUNC;
 include { getQuastThresholds;
           QUAST as PRE_QUAST;
           QUAST                            } from './modules/quast.nf'
-include { MDMCLEANER                       } from './modules/mdmcleaner.nf'
+include { MDMCLEANER;
+          MDMCLEANER_AUDIT                 } from './modules/mdmcleaner.nf'
 include { SEQKIT                           } from './modules/seqkit.nf'
 include { REPORT;
           COMBINE_REPORTS;
@@ -82,6 +83,9 @@ workflow QC_MAGS {
         [group_key, meta, fastas]
     }
     | transpose
+    | set { mdmcleaner_input }
+
+    mdmcleaner_input
     | MDMCLEANER
     | SEQKIT
     | groupTuple(remainder: true)
@@ -89,6 +93,34 @@ workflow QC_MAGS {
         [ meta.first(), fasta_list ]
     }
     | set { postqc_fastas }
+
+    // Audit: every genome sent to MDMCLEANER should come back cleaned. A genome it fails on is retried twice
+    // and then ignored, which removes it from post-QC silently; list those and warn. The empty line from
+    // Channel.of('') keeps both files non-empty so the audit still runs when nothing (or everything) failed.
+    String mdm_ext = ".${params.fasta_ext.replaceAll(/^\./, '')}"
+    mdmcleaner_input
+    | map { group_key, meta, fasta ->
+        def name = fasta.name.endsWith(mdm_ext) ? fasta.name[0..<(fasta.name.length() - mdm_ext.length())] : fasta.baseName
+        "${meta.ID}\t${name}"
+    }
+    | concat(Channel.of(''))
+    | collectFile(name: 'mdmcleaner_sent.tsv', newLine: true)
+    | set { mdmcleaner_sent }
+
+    MDMCLEANER.out.results
+    | map { group_key, meta, fasta -> "${meta.ID}\t${fasta.name.replaceAll(/_filtered_kept_contigs\..*$/, '')}" }
+    | concat(Channel.of(''))
+    | collectFile(name: 'mdmcleaner_cleaned.tsv', newLine: true)
+    | set { mdmcleaner_cleaned }
+
+    MDMCLEANER_AUDIT(mdmcleaner_sent, mdmcleaner_cleaned)
+    MDMCLEANER_AUDIT.out.n_skipped
+    | subscribe { n ->
+        if (n.trim().isInteger() && n.trim().toInteger() > 0) {
+            log.warn "[MDMCLEANER audit] ${n.trim()} genome(s) failed MDMCLEANER and have NO post-QC result " +
+                     "(dropped by errorStrategy 'ignore'); see ${params.outdir}/report/mdmcleaner_skipped.tsv"
+        }
+    }
 
     post_qc = Channel.value("post_qc")
 
