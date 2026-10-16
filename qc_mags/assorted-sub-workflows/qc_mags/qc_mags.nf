@@ -8,6 +8,7 @@ include { getQuastThresholds;
           QUAST                            } from './modules/quast.nf'
 include { INPUT_FASTA_CHECK                } from './modules/input_check.nf'
 include { MDMCLEANER;
+          MDMCLEANER_SKIP;
           MDMCLEANER_AUDIT                 } from './modules/mdmcleaner.nf'
 include { SEQKIT                           } from './modules/seqkit.nf'
 include { REPORT;
@@ -24,6 +25,21 @@ def ensureList(Object maybeListLike) {
         return maybeListLike as List
     } else {
         return [maybeListLike]
+    }
+}
+
+// Genome type per genome (preqc name -> 'mag'|'isolate') for MIXED runs, from --genome_types (curated
+// provenance); genomes not listed use --genome_type. Anything that is not exactly 'isolate' is a MAG.
+def genomeTypeMap() {
+    if (!params.genome_types) { return [:] }
+    def rows = file(params.genome_types, checkIfExists: true).readLines()
+    def header = rows[0].split('\t').collect { it.trim() }
+    def gi = header.indexOf('genome')
+    def ti = header.indexOf('genome_type')
+    if (gi < 0 || ti < 0) { error "--genome_types ${params.genome_types}: needs columns 'genome' and 'genome_type'" }
+    rows.drop(1).findAll { it.trim() }.collectEntries { l ->
+        def c = l.split('\t', -1)
+        [(c[gi].trim()): c[ti].trim().toLowerCase()]
     }
 }
 
@@ -99,8 +115,26 @@ workflow QC_MAGS {
     | transpose
     | set { mdmcleaner_input }
 
+    // MDMCLEANER removes contaminant contigs from MAGs (binning artefacts). Isolates are pure cultures:
+    // cleaning them would only risk stripping real accessory content, so they skip it. MDMCLEANER_SKIP gives
+    // them the same <name>_filtered_kept_contigs file name, so SEQKIT, post-QC tools and the report joins
+    // are identical for both genome types.
+    def gtypes = genomeTypeMap()
+    String run_type = (params.genome_type == 'isolate') ? 'isolate' : 'mag'
+    String type_ext = ".${params.fasta_ext.replaceAll(/^\./, '')}"
     mdmcleaner_input
-    | MDMCLEANER
+    | branch { group_key, meta, fasta ->
+        def name = fasta.name.endsWith(type_ext) ? fasta.name[0..<(fasta.name.length() - type_ext.length())] : fasta.baseName
+        isolate: (gtypes.containsKey(name) ? gtypes[name] : run_type) == 'isolate'
+        mag: true
+    }
+    | set { by_type }
+
+    MDMCLEANER(by_type.mag)
+    MDMCLEANER_SKIP(by_type.isolate)
+
+    MDMCLEANER.out.results
+    | mix(MDMCLEANER_SKIP.out.results)
     | SEQKIT
     | groupTuple(remainder: true)
     | map { group_key, meta, fasta_list ->
@@ -112,7 +146,7 @@ workflow QC_MAGS {
     // and then ignored, which removes it from post-QC silently; list those and warn. The empty line from
     // Channel.of('') keeps both files non-empty so the audit still runs when nothing (or everything) failed.
     String mdm_ext = ".${params.fasta_ext.replaceAll(/^\./, '')}"
-    mdmcleaner_input
+    by_type.mag   // isolates never go to MDMCLEANER, so they are not "sent"
     | map { group_key, meta, fasta ->
         def name = fasta.name.endsWith(mdm_ext) ? fasta.name[0..<(fasta.name.length() - mdm_ext.length())] : fasta.baseName
         "${meta.ID}\t${name}"

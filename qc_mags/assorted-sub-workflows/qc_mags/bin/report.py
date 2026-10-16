@@ -137,6 +137,19 @@ def mimag_quality(completeness, contamination, gunc_pass=None, genome_type="mag"
     return "LQ"
 
 
+REVIEW_COLUMN = "qc_review"
+ISOLATE_REVIEW_FLAG = "isolate_completeness_le_90: check CheckM2 model coverage (novel species?) before trusting the tier"
+
+
+def qc_review_flag(completeness, genome_type="mag") -> str:
+    """Isolates at completeness <= 90 are MQ, not HQ. CheckM2 is weakest on rare and novel species, so such
+    an isolate may be a complete genome that the models under-score: flag it for review (ys4, 2026-10-16).
+    The tier is not changed. MAGs are never flagged here."""
+    if str(genome_type).strip().lower() != "isolate" or pd.isna(completeness):
+        return ""
+    return ISOLATE_REVIEW_FLAG if completeness <= 90 else ""
+
+
 def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
     if COMPLETENESS_COLUMN in df.columns and CONTAMINATION_COLUMN in df.columns:
         comp = pd.to_numeric(df[COMPLETENESS_COLUMN], errors="coerce")
@@ -150,12 +163,14 @@ def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
         gtype = df["genome_status"] if "genome_status" in df.columns else ["mag"] * len(df)
         gtype = ["isolate" if str(t).strip().lower() == "isolate" else "mag" for t in gtype]
         df[QUALITY_COLUMN] = [mimag_quality(a, b, g, t) for a, b, g, t in zip(comp, cont, gunc, gtype)]
+        df[REVIEW_COLUMN] = [qc_review_flag(a, t) for a, t in zip(comp, gtype)]
     else:
         logging.warning(
             f"{COMPLETENESS_COLUMN}/{CONTAMINATION_COLUMN} not in report; "
             f"{QUALITY_COLUMN} left empty"
         )
         df[QUALITY_COLUMN] = None
+        df[REVIEW_COLUMN] = ""
     return df
 
 
@@ -220,6 +235,7 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
         "sample_or_strain_name",
         "genome_status",
         QUALITY_COLUMN,
+        REVIEW_COLUMN,
     ]
     other_cols = sorted([col for col in df.columns if col not in priority_cols])
     new_order = priority_cols + other_cols
