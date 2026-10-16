@@ -28,6 +28,7 @@ process REPORT {
     script:
     command = "${projectDir}/assorted-sub-workflows/qc_mags/bin/report.py"
     final_report = "${meta.ID}_final_report.tsv"
+    genome_types_arg = params.genome_types ? "--genome_types ${file(params.genome_types, checkIfExists: true)}" : ""
     """
     ${command} \\
         --pre_qc_quast pre_quast_report.tsv \\
@@ -38,7 +39,7 @@ process REPORT {
         --post_qc_checkm2 post_checkm2_report.tsv \\
         --post_qc_gunc post_gunc_report.tsv \\
         --config ${report_config} \\
-        --genome_type ${params.genome_type} \\
+        --genome_type ${params.genome_type} ${genome_types_arg} \\
         --output ${final_report}
     """
 }

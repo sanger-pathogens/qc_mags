@@ -102,28 +102,35 @@ def process_postqc_genome_name(df: pd.DataFrame) -> pd.DataFrame:
     return new_df
 
 
-GENOME_TYPES = ("auto", "mag", "isolate")
+GENOME_TYPES = ("mag", "isolate", "auto")   # "auto" is a deprecated alias for "mag" (the old name test is retired)
 COMPLETENESS_COLUMN = "checkm2_postqc_Completeness"
 CONTAMINATION_COLUMN = "checkm2_postqc_Contamination"
 QUALITY_COLUMN = "mimag_quality"
 GUNC_COLUMN = "gunc_postqc_pass.GUNC"
 
 
-def mimag_quality(completeness, contamination, gunc_pass=None) -> Optional[str]:
-    """MIMAG tier from post-QC CheckM2 plus post-QC GUNC (the rRNA/tRNA criteria
-    of the full MIMAG HQ standard are not assessed).
-    HQ: completeness > 90, contamination < 5 and GUNC pass;
-    MQ: completeness >= 50, contamination < 10 and GUNC not failed;
-    otherwise LQ (a GUNC fail is always LQ). HQ needs an explicit GUNC pass, so a
-    genome without a GUNC result is MQ at most. Empty if CheckM2 is missing.
-    This is the team162 rule used by every downstream table (CHAIN master,
-    package-qc-mags); before 2026-10-16 this column ignored GUNC and used >= 90."""
+def mimag_quality(completeness, contamination, gunc_pass=None, genome_type="mag") -> Optional[str]:
+    """Quality tier from post-QC CheckM2 plus post-QC GUNC (the rRNA/tRNA criteria
+    of the full MIMAG HQ standard are not assessed). Same CheckM2 thresholds for
+    every genome type:
+      HQ: completeness > 90 and contamination < 5;
+      MQ: completeness >= 50 and contamination < 10; otherwise LQ.
+    GUNC (binning chimerism) gates MAGs only:
+      genome_type "mag" (default, also used for anything unknown): HQ needs an
+      explicit GUNC pass, a GUNC fail is LQ, no GUNC result is MQ at most;
+      genome_type "isolate" (a pure culture: no binning, so no binning chimeras):
+      GUNC is advisory and never changes the tier.
+    genome_type must come from curated provenance (manifest, source catalogue),
+    never from the genome name. Empty if CheckM2 is missing. This is the team162
+    rule used by every downstream table (CHAIN master, package-qc-mags); before
+    2026-10-16 this column ignored GUNC and used >= 90."""
     if pd.isna(completeness) or pd.isna(contamination):
         return None
+    isolate = str(genome_type).strip().lower() == "isolate"
     g = "" if gunc_pass is None or (not isinstance(gunc_pass, str) and pd.isna(gunc_pass)) else str(gunc_pass).strip().lower()
-    if g == "false":
+    if not isolate and g == "false":
         return "LQ"
-    if completeness > 90 and contamination < 5 and g == "true":
+    if completeness > 90 and contamination < 5 and (isolate or g == "true"):
         return "HQ"
     if completeness >= 50 and contamination < 10:
         return "MQ"
@@ -139,7 +146,10 @@ def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
         else:
             logging.warning(f"{GUNC_COLUMN} not in report; no genome can be HQ (needs a GUNC pass)")
             gunc = [None] * len(df)
-        df[QUALITY_COLUMN] = [mimag_quality(a, b, g) for a, b, g in zip(comp, cont, gunc)]
+        # genome_status is set by enrich_fields from --genome_type (mag unless the run is declared isolates)
+        gtype = df["genome_status"] if "genome_status" in df.columns else ["mag"] * len(df)
+        gtype = ["isolate" if str(t).strip().lower() == "isolate" else "mag" for t in gtype]
+        df[QUALITY_COLUMN] = [mimag_quality(a, b, g, t) for a, b, g, t in zip(comp, cont, gunc, gtype)]
     else:
         logging.warning(
             f"{COMPLETENESS_COLUMN}/{CONTAMINATION_COLUMN} not in report; "
@@ -149,23 +159,49 @@ def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def enrich_fields(df: pd.DataFrame, genome_type: str = "auto") -> pd.DataFrame:
+def read_genome_types(path) -> dict:
+    """Optional per-genome types for mixed runs: TSV with columns genome (= input genome name without
+    extension, i.e. preqc_genome_name) and genome_type (mag|isolate), from curated provenance."""
+    if path is None:
+        return {}
+    t = pd.read_csv(path, sep="\t", dtype=str)
+    missing = {"genome", "genome_type"} - set(t.columns)
+    if missing:
+        raise SystemExit(f"--genome_types {path}: missing column(s) {sorted(missing)}")
+    t["genome_type"] = t["genome_type"].str.strip().str.lower()
+    bad = sorted(set(t["genome_type"]) - {"mag", "isolate"})
+    if bad:
+        raise SystemExit(f"--genome_types {path}: genome_type must be mag or isolate, found {bad}")
+    dup = t["genome"][t["genome"].duplicated()]
+    if len(dup):
+        raise SystemExit(f"--genome_types {path}: {len(dup)} duplicated genome names, e.g. {dup.iloc[0]}")
+    return dict(zip(t["genome"], t["genome_type"]))
+
+
+def enrich_fields(df: pd.DataFrame, genome_type: str = "mag", genome_types: dict = None) -> pd.DataFrame:
     df["sample_or_strain_name"] = (
         df[JOIN_COLUMN].str.rsplit("_", expand=True, n=1).loc[:, 0]
     )
     if genome_type == "auto":
-        # Legacy heuristic: "MAG" anywhere in the name. Misfires on MAG sets
-        # whose names do not contain it (e.g. mags_maker's <sample>_bin_N).
-        df["genome_status"] = df[JOIN_COLUMN].apply(
-            lambda x: "mag" if "MAG" in x.upper() else "isolate"
-        )
-    else:
-        df["genome_status"] = genome_type
+        # The old name test ("MAG" anywhere in the name) is retired: it labelled 18,580 of
+        # 18,581 external MAGs/isolates wrongly. Unknown type is treated as "mag" (GUNC gates).
+        logging.warning("--genome_type auto is deprecated; treating every genome as 'mag'")
+        genome_type = "mag"
+    df["genome_status"] = genome_type
+    if genome_types:
+        # mixed run: per-genome type from the table; genomes not listed keep the run-level type
+        hit = df[JOIN_COLUMN].map(genome_types)
+        df.loc[hit.notna(), "genome_status"] = hit[hit.notna()]
+        logging.info(f"--genome_types: {int(hit.notna().sum())} of {len(df)} genomes typed from the table "
+                     f"({int((hit == 'isolate').sum())} isolate); the rest use --genome_type {genome_type}")
+        if hit.notna().sum() == 0:
+            logging.warning("--genome_types matched no genome in this report: check the 'genome' column "
+                            "uses input genome names without extension (preqc_genome_name)")
     df = add_mimag_quality(df)
     return df
 
 
-def merge_all(*dfs: pd.DataFrame, genome_type: str = "auto") -> pd.DataFrame:
+def merge_all(*dfs: pd.DataFrame, genome_type: str = "mag", genome_types: dict = None) -> pd.DataFrame:
     df, other_dfs = dfs[0], dfs[1:]
     join_keys = [JOIN_COLUMN]
     for other_df in other_dfs:
@@ -173,7 +209,7 @@ def merge_all(*dfs: pd.DataFrame, genome_type: str = "auto") -> pd.DataFrame:
         cols_to_drop = overlapping_cols - set(join_keys)
         other_df_clean = other_df.drop(columns=cols_to_drop)
         df = df.merge(other_df_clean, on=join_keys, how="left")
-    df = enrich_fields(df, genome_type)
+    df = enrich_fields(df, genome_type, genome_types)
     return df
 
 
@@ -262,9 +298,17 @@ def parse_args():
     parser.add_argument(
         "--genome_type",
         choices=GENOME_TYPES,
-        default="auto",
-        help="genome_status for every genome: 'mag' or 'isolate', or 'auto' "
-        "(default) for the name heuristic ('mag' if the name contains 'MAG')",
+        default="mag",
+        help="genome type of every genome in the run: 'mag' (default; GUNC gates the tier) or "
+        "'isolate' (pure cultures; GUNC reported but advisory). Set it from curated provenance, "
+        "never from genome names. 'auto' is deprecated and means 'mag'.",
+    )
+    parser.add_argument(
+        "--genome_types",
+        type=Path,
+        default=None,
+        help="optional TSV for mixed runs: columns genome (input genome name without extension) and "
+        "genome_type (mag|isolate), from curated provenance; genomes not listed use --genome_type",
     )
     return parser.parse_args()
 
@@ -308,7 +352,7 @@ def main():
             df[JOIN_COLUMN] = stripped.fillna(df[JOIN_COLUMN])
         dfs.append(df)
 
-    merged = merge_all(*dfs, genome_type=args.genome_type)
+    merged = merge_all(*dfs, genome_type=args.genome_type, genome_types=read_genome_types(args.genome_types))
     merged = reorder_columns(merged)
 
     check_taxonomy(merged)
