@@ -106,16 +106,24 @@ GENOME_TYPES = ("auto", "mag", "isolate")
 COMPLETENESS_COLUMN = "checkm2_postqc_Completeness"
 CONTAMINATION_COLUMN = "checkm2_postqc_Contamination"
 QUALITY_COLUMN = "mimag_quality"
+GUNC_COLUMN = "gunc_postqc_pass.GUNC"
 
 
-def mimag_quality(completeness, contamination) -> Optional[str]:
-    """MIMAG-style tier from post-QC CheckM2 (completeness/contamination only;
-    the rRNA/tRNA criteria of the full MIMAG HQ standard are not assessed).
-    HQ: >= 90 and < 5; MQ: >= 50 and < 10; otherwise LQ. Empty if CheckM2 is
-    missing for the genome."""
+def mimag_quality(completeness, contamination, gunc_pass=None) -> Optional[str]:
+    """MIMAG tier from post-QC CheckM2 plus post-QC GUNC (the rRNA/tRNA criteria
+    of the full MIMAG HQ standard are not assessed).
+    HQ: completeness > 90, contamination < 5 and GUNC pass;
+    MQ: completeness >= 50, contamination < 10 and GUNC not failed;
+    otherwise LQ (a GUNC fail is always LQ). HQ needs an explicit GUNC pass, so a
+    genome without a GUNC result is MQ at most. Empty if CheckM2 is missing.
+    This is the team162 rule used by every downstream table (CHAIN master,
+    package-qc-mags); before 2026-10-16 this column ignored GUNC and used >= 90."""
     if pd.isna(completeness) or pd.isna(contamination):
         return None
-    if completeness >= 90 and contamination < 5:
+    g = "" if gunc_pass is None or (not isinstance(gunc_pass, str) and pd.isna(gunc_pass)) else str(gunc_pass).strip().lower()
+    if g == "false":
+        return "LQ"
+    if completeness > 90 and contamination < 5 and g == "true":
         return "HQ"
     if completeness >= 50 and contamination < 10:
         return "MQ"
@@ -126,7 +134,12 @@ def add_mimag_quality(df: pd.DataFrame) -> pd.DataFrame:
     if COMPLETENESS_COLUMN in df.columns and CONTAMINATION_COLUMN in df.columns:
         comp = pd.to_numeric(df[COMPLETENESS_COLUMN], errors="coerce")
         cont = pd.to_numeric(df[CONTAMINATION_COLUMN], errors="coerce")
-        df[QUALITY_COLUMN] = [mimag_quality(a, b) for a, b in zip(comp, cont)]
+        if GUNC_COLUMN in df.columns:
+            gunc = df[GUNC_COLUMN]
+        else:
+            logging.warning(f"{GUNC_COLUMN} not in report; no genome can be HQ (needs a GUNC pass)")
+            gunc = [None] * len(df)
+        df[QUALITY_COLUMN] = [mimag_quality(a, b, g) for a, b, g in zip(comp, cont, gunc)]
     else:
         logging.warning(
             f"{COMPLETENESS_COLUMN}/{CONTAMINATION_COLUMN} not in report; "
