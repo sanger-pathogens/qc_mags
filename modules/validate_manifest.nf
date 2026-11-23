@@ -23,21 +23,33 @@ def validateManifest(manifestFile, batchSize) {
             log.warn("The following unexpected columns were found in the manifest: ${unexpectedColumns}")
         }
 
-        // Process each line
-        lines.drop(1).eachWithIndex { line, lineNum ->
-            def values = line.split(',')*.trim()
-            def mags_dir = new File(values[magsIndex])
+        def valid = 0
+        def missing = []
 
-            if (batchSize == 0) {
-                def id = values[idIndex]
-                if (!id) throw new Exception("Missing ID at line ${lineNum+1}")
+        lines.drop(1).eachWithIndex { line, i ->
+            def rowNum = i + 2   // line number in the file, counting the header
+            def values = line.split(',', -1)*.trim()
+
+            if (batchSize == 0 && !(values.size() > idIndex && values[idIndex])) {
+                throw new Exception("Missing ID at line ${rowNum}")
+            }
+            if (values.size() <= magsIndex || !values[magsIndex]) {
+                throw new Exception("Missing Directory at line ${rowNum}")
             }
 
-            if (!mags_dir) throw new Exception("Missing Directory at line ${lineNum+1}")
-            if (!mags_dir.exists()) throw new Exception("Directory does not exist at the given path '${mags_dir}' at line ${lineNum+1}")
+            def mags_dir = new File(values[magsIndex])
+            if (mags_dir.isDirectory()) {
+                valid++
+            } else {
+                missing << "line ${rowNum}: ${mags_dir}"
+            }
         }
 
-        // Return manifest path on success
+        if (missing) {
+            log.warn "${missing.size()} of ${valid + missing.size()} manifest entries have no directory on the filesystem and will be skipped:\n  " + missing.join('\n  ')
+        }
+        if (valid == 0) throw new Exception("None of the directories in the manifest exist")
+
         return file.absolutePath
 
     } catch (Exception e) {
