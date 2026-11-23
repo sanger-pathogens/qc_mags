@@ -3,10 +3,9 @@ def validateManifest(manifestFile, batchSize) {
         def file = new File(manifestFile)
         if (!file.exists()) throw new Exception("Manifest file not found: ${manifestFile}")
 
-        def lines = file.readLines()
+        def lines = file.readLines().findAll { it.trim() }   // ignore blank lines
         if (lines.size() < 2) throw new Exception("Manifest file is empty or has no data rows")
 
-        // Parse header
         def header = lines[0].split(',')*.trim()
 
         def idIndex = null
