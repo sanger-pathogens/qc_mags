@@ -88,6 +88,13 @@ sample1,/path/to/sample1/bins/
 sample2,/path/to/sample2/bins/
 ```
 
+[!TIP] To generate this manifest from the output of the [mags_maker](https://github.com/sanger-pathogens/mags_maker) pipeline you can use `find` as below.
+To create manifest named `manifest.csv` in your current working directory:
+
+```
+find "$(realpath <mags_maker_results_dir>)" -mindepth 2 -maxdepth 2 -type d -name '*_best_bins' | sort | awk -F/ 'BEGIN{print "ID,mags_dir"} {print $(NF-1) "," $0}' > manifest.csv
+```
+
 The `--recursive` flag can be used in conjunction with the manifest to search each listed directory, automatically discovering all MAGs beneath the specified root paths rather than only those at the top level. Duplicate MAGs resolved to the same path across multiple entries are deduplicated prior to processing. When using this option, specifying `--batch_size` is required to ensure MAG counts per batch remain within sensible bounds — see [Batching large runs](#batching-large-runs).
 
 ### Output
